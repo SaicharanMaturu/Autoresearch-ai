@@ -304,6 +304,7 @@ function App() {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
+                    autoComplete="email"
                     required
                   />
                 </label>
@@ -314,6 +315,7 @@ function App() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     type="password"
+                    autoComplete="current-password"
                     required
                   />
                 </label>
