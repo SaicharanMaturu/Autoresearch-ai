@@ -1,0 +1,6 @@
+{
+  "name": "Aethelgard OS",
+  "description": "An advanced multi-agent scientific discovery dashboard featuring quantum network telemetry, research gap topology analysis, intelligence flux semantic clouds, presentation studio, and interactive agent simulation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
