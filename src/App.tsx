@@ -9,9 +9,15 @@ import { ResearchUpload } from "./components/ResearchUpload";
 import { ResearchChat } from "./components/ResearchChat";
 import { ProfilePage } from "./components/ProfilePage";
 import { HistoryPage } from "./components/HistoryPage";
-import { PlaceholderPage } from "./components/PlaceholderPage";
+import { AgentMonitor } from "./components/AgentMonitor";
+import { Settings } from "./components/Settings";
+import { ResearchUniverse } from "./components/ResearchUniverse";
+import { ResearchGapLab } from "./components/ResearchGapLab";
+import { DataStreams } from "./components/DataStreams";
+import { MemoryChamber } from "./components/MemoryChamber";
+import { PresentationStudio } from "./components/PresentationStudio";
 
-type PageId = 'login' | 'signup' | 'forgot-password' | 'reset-password' | 'dashboard' | 'upload' | 'chat' | 'profile' | 'history' | 'universe' | 'gap-lab' | 'streams' | 'chamber' | 'studio';
+type PageId = 'login' | 'signup' | 'forgot-password' | 'reset-password' | 'dashboard' | 'upload' | 'chat' | 'profile' | 'history' | 'universe' | 'gap-lab' | 'streams' | 'chamber' | 'studio' | 'agents' | 'settings';
 
 interface User {
   id: string;
@@ -165,44 +171,25 @@ export default function App() {
         <HistoryPage onBack={goBack} />
       )}
       {currentPage === 'universe' && (
-        <PlaceholderPage
-          title="Research Universe"
-          description="Interactive galaxy-like knowledge system showing papers as planets and topics as constellations"
-          icon={Brain}
-          onBack={goBack}
-        />
+        <ResearchUniverse onBack={goBack} />
       )}
       {currentPage === 'gap-lab' && (
-        <PlaceholderPage
-          title="Research Gap Lab"
-          description="Discover missing areas in research landscape and identify opportunities"
-          icon={Layers}
-          onBack={goBack}
-        />
+        <ResearchGapLab onBack={goBack} />
       )}
       {currentPage === 'streams' && (
-        <PlaceholderPage
-          title="Data Streams"
-          description="Citation flux analysis and semantic tags analytics"
-          icon={Activity}
-          onBack={goBack}
-        />
+        <DataStreams onBack={goBack} />
       )}
       {currentPage === 'chamber' && (
-        <PlaceholderPage
-          title="Memory Chamber"
-          description="Personal behavior helix timelines and user interaction history"
-          icon={BrainCircuit}
-          onBack={goBack}
-        />
+        <MemoryChamber onBack={goBack} />
       )}
       {currentPage === 'studio' && (
-        <PlaceholderPage
-          title="Presentation Studio"
-          description="AI-powered slide generation and presentation creation"
-          icon={Presentation}
-          onBack={goBack}
-        />
+        <PresentationStudio onBack={goBack} />
+      )}
+      {currentPage === 'agents' && (
+        <AgentMonitor onBack={goBack} />
+      )}
+      {currentPage === 'settings' && (
+        <Settings onBack={goBack} onLogout={handleLogout} />
       )}
     </>
   );

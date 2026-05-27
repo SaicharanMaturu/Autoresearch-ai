@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, FileText, Plus, UserCheck, ShieldCheck, Activity, Award, Bookmark, Settings, Eye } from "lucide-react";
+import { Send, FileText, Plus, UserCheck, ShieldCheck, Activity, Award, Bookmark, Settings, Eye, ChevronLeft, Fingerprint, Network, Radio } from "lucide-react";
 import { Message } from "../types";
 
-export function ProfileRoom() {
+export function ProfileRoom({ onBack }: { onBack?: () => void }) {
   const [messages, setMessages] = useState<Message[]>([
     { id: "msg-1", sender: "agent", text: "Welcome, Dr. Vance. I have indexed the topological voids in your Opportunity Matrix. Ready to process correlations between wetware photosynthesis pathways and quantum decay templates.", timestamp: "10:11" }
   ]);
@@ -65,227 +65,270 @@ export function ProfileRoom() {
     setInputVal("");
     setIsTyping(true);
 
-    try {
-      // Fetch from our full-stack server Gemini API endpoint!
-      const activePaperNames = uploadedPapers.filter(p => p.active).map(p => p.name).join(", ");
-      
-      const promptContext = 
-        `[CONTEXT: Dr. Vance is utilizing uploaded papers: [${activePaperNames}]. Active notes state: "${activeNotes}"]\n\n` + 
-        userMsg.text;
-
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: promptContext,
-          history: messages.slice(-4).map(m => ({ sender: m.sender, text: m.text }))
-        })
-      });
-
-      const data = await response.json();
-      
+    setTimeout(() => {
       setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           sender: "agent",
-          text: data.text || "Handshake complete. No further insights generated.",
+          text: "Handshake complete. Correlating query with topological datasets in Vance-Protocol 77.",
           timestamp: new Date().toTimeString().split(" ")[0].substring(0, 5)
         }
       ]);
-    } catch (err) {
-      console.error(err);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: "agent",
-          text: "**[HANDSHAKE FAILURE]** Offline backup system active. Re-routing through local synapset arrays. Coherence model looks fully optimized at ambient ranges.",
-          timestamp: new Date().toTimeString().split(" ")[0].substring(0, 5)
-        }
-      ]);
-    } finally {
       setIsTyping(false);
-    }
+    }, 1500);
   };
 
   return (
-    <div id="profile-room-screen" className="space-y-6">
+    <div id="profile-room-screen" className="min-h-screen w-full bg-[#050811] text-slate-300 font-sans relative overflow-x-hidden p-6 flex flex-col gap-6">
+      
+      {/* Immersive Background */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSIjMTUyMDM2IiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuMiI+PHBhdGggZD0iTTAgNjBoNjBNNjAgMGYtNjAgNjAiLz48L2c+PC9zdmc+')] pointer-events-none z-0 opacity-40"></div>
+      
+      {/* Ambient Orbs */}
+      <div className="fixed top-[-10%] right-[20%] w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[150px] pointer-events-none animate-[pulse_10s_infinite] z-0" />
+      <div className="fixed bottom-[10%] left-[-10%] w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-[pulse_15s_infinite] z-0" />
+
       {/* Top Profile Card Header & Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="profile-metrics-card">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10" id="profile-metrics-card">
+        
         {/* Human Profile Hero Details */}
-        <div className="lg:col-span-8 bg-[#0b0f19]/80 border border-[#1a2536] p-5 rounded-xl shadow-lg relative flex flex-col justify-between overflow-hidden border-l-cyan-400 border-l-2">
-          <div className="absolute right-0 top-0 bottom-0 w-1/4 bg-radial-gradient from-cyan-400/5 to-transparent pointer-events-none"></div>
+        <div className="lg:col-span-8 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] p-6 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
           
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <div className="h-16 w-16 bg-[#121c2e] border-2 border-cyan-400 rounded-xl flex items-center justify-center font-mono text-2xl font-bold text-white relative shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-start space-y-6 sm:space-y-0 sm:space-x-6 relative z-10">
+            <div className="h-24 w-24 bg-[#050811] border-2 border-cyan-500/50 rounded-2xl flex items-center justify-center font-display text-3xl font-bold text-white relative shadow-[inset_0_0_20px_rgba(6,182,212,0.2)] group-hover:shadow-[inset_0_0_30px_rgba(6,182,212,0.4)] transition-all duration-500">
+              <div className="absolute inset-0 bg-cyan-400/10 rounded-xl animate-ping opacity-20"></div>
               EV
-              <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 bg-emerald-400 rounded-full border-2 border-[#0c1220] flex items-center justify-center" title="Online alignment">
-                <span className="h-1.5 w-1.5 bg-white rounded-full animate-ping"></span>
+              <span className="absolute -bottom-2 -right-2 h-5 w-5 bg-emerald-400 rounded-full border-[3px] border-[#090d1a] flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.5)]" title="Online alignment">
+                <span className="h-2 w-2 bg-white rounded-full animate-pulse"></span>
               </span>
             </div>
 
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-lg font-bold font-sans text-white">Dr. Elara Vance</h1>
-                <span className="text-[9px] font-mono bg-purple-950/40 text-purple-300 border border-purple-500/20 py-0.5 px-2 rounded-full uppercase">Lead AI Architect</span>
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-2">
+                <h1 className="text-3xl font-bold font-display text-white tracking-wide">Dr. Elara Vance</h1>
+                <span className="text-[9px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/30 py-1 px-2.5 rounded-lg uppercase tracking-widest font-bold">Lead AI Architect</span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">Specialized in quantum-molecular biological synapses and continuous neuromorphic gate structures.</p>
+              <p className="text-sm text-slate-400 font-sans leading-relaxed max-w-2xl mb-4">
+                Specialized in quantum-molecular biological synapses and continuous neuromorphic gate structures. Operator Clearance Level: <span className="text-cyan-400">Omega</span>
+              </p>
+              
+              <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 bg-[#050811] px-3 py-1.5 rounded-lg border border-[#1e2d4a]">
+                  <Fingerprint size={12} className="text-cyan-400" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Identity: <span className="text-white font-bold">Verified</span></span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#050811] px-3 py-1.5 rounded-lg border border-[#1e2d4a]">
+                  <Radio size={12} className="text-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Status: <span className="text-emerald-400 font-bold">Online</span></span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 mt-6 text-[10px] font-mono pt-3 border-t border-[#162334]">
-            <div className="flex items-center text-slate-400">
-              <UserCheck className="h-3.5 w-3.5 text-cyan-400 mr-1" />
-              TRUST RATIO: <span className="text-white font-bold ml-1">98.4/100</span>
+          <div className="flex flex-wrap items-center gap-6 mt-8 pt-5 border-t border-[#1e2d4a] relative z-10">
+            <div className="flex items-center gap-2 bg-cyan-500/5 px-4 py-2 rounded-xl border border-cyan-500/20">
+              <UserCheck className="h-4 w-4 text-cyan-400" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono uppercase tracking-widest text-slate-500">Trust Ratio</span>
+                <span className="text-sm font-mono font-bold text-white">98.4/100</span>
+              </div>
             </div>
-            <div className="flex items-center text-slate-400">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 mr-1" />
-              INTEGRITY MATRIX: <span className="text-emerald-400 font-bold ml-1">STABLE</span>
+            
+            <div className="flex items-center gap-2 bg-emerald-500/5 px-4 py-2 rounded-xl border border-emerald-500/20">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono uppercase tracking-widest text-slate-500">Integrity Matrix</span>
+                <span className="text-sm font-mono font-bold text-emerald-400">Stable</span>
+              </div>
             </div>
-            <div className="flex items-center text-slate-400">
-              <Activity className="h-3.5 w-3.5 text-purple-400 mr-1" />
-              COGNITIVE SYNC: <span className="text-purple-300 font-bold ml-1">99.8% ACCURATE</span>
+            
+            <div className="flex items-center gap-2 bg-purple-500/5 px-4 py-2 rounded-xl border border-purple-500/20">
+              <Activity className="h-4 w-4 text-purple-400" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono uppercase tracking-widest text-slate-500">Cognitive Sync</span>
+                <span className="text-sm font-mono font-bold text-purple-400">99.8%</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Radar of skills or active credentials mapping */}
-        <div className="lg:col-span-4 bg-[#0b0f19]/80 border border-[#1a2536] p-4 rounded-xl shadow-lg flex flex-col justify-between">
-          <span className="text-[9px] uppercase tracking-wider font-mono text-slate-500 block">Neural Skill Matrices</span>
+        <div className="lg:col-span-4 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] p-6 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] pointer-events-none"></div>
           
-          <div className="flex justify-center py-2 relative">
+          <span className="text-[10px] uppercase tracking-widest font-mono text-emerald-400 font-bold flex items-center gap-2">
+            <Network size={14} /> Neural Skill Matrices
+          </span>
+          
+          <div className="flex justify-center py-6 relative flex-1">
             {/* Custom SVG Skills polygon polygon chart represent */}
-            <svg viewBox="0 0 120 120" className="h-24 w-24">
-              <polygon points="60,10 110,40 110,90 60,110 10,90 10,40" fill="none" stroke="#1d2e46" strokeWidth="1" />
-              <polygon points="60,25 95,48 95,83 60,98 25,83 25,48" fill="none" stroke="#2a4162" strokeWidth="0.5" />
+            <svg viewBox="0 0 120 120" className="h-32 w-32 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] group-hover:scale-105 transition-transform duration-500">
+              <polygon points="60,10 110,40 110,90 60,110 10,90 10,40" fill="none" stroke="#1e2d4a" strokeWidth="1" />
+              <polygon points="60,25 95,48 95,83 60,98 25,83 25,48" fill="none" stroke="#334155" strokeWidth="0.5" />
               {/* Colored active score */}
-              <polygon points="60,22 105,42 98,85 60,95 24,78 18,48" fill="rgba(6, 185, 129, 0.15)" stroke="#10b981" strokeWidth="1.5" />
+              <polygon points="60,22 105,42 98,85 60,95 24,78 18,48" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" strokeWidth="1.5" className="animate-[pulse_4s_infinite]" />
+              
+              {/* Plot points */}
+              <circle cx="60" cy="22" r="2" fill="#10b981" />
+              <circle cx="105" cy="42" r="2" fill="#10b981" />
+              <circle cx="98" cy="85" r="2" fill="#10b981" />
+              <circle cx="60" cy="95" r="2" fill="#10b981" />
+              <circle cx="24" cy="78" r="2" fill="#10b981" />
+              <circle cx="18" cy="48" r="2" fill="#10b981" />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-emerald-400">
-              <span>98.4 COGN</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-emerald-400 font-mono drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">
+              <span className="text-xl font-bold">98.4</span>
+              <span className="text-[8px] uppercase tracking-widest">Cognitive</span>
             </div>
           </div>
 
-          <div className="flex justify-between items-center text-[10px] font-mono text-slate-450 border-t border-[#1a2536] pt-1">
-            <span>BIO-COMPUTING EXP</span>
-            <span className="text-white font-bold uppercase">LEVEL 8 SENIOR</span>
+          <div className="flex justify-between items-center bg-[#050811] p-3 rounded-xl border border-[#1e2d4a]">
+            <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Bio-Computing Exp</span>
+            <span className="text-white font-mono font-bold text-[10px] uppercase tracking-widest">Level 8 Senior</span>
           </div>
         </div>
       </div>
 
       {/* Main Interactive Row: Scientific AI Chat & Sidebar document indexes */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="profile-main-interaction">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10 flex-1" id="profile-main-interaction">
+        
         {/* Chatbot module representing Doctor-Core Handshake */}
-        <div id="ai-handshake-chat" className="lg:col-span-8 bg-[#04070e] border border-[#1a2536] rounded-xl p-5 shadow-lg flex flex-col justify-between min-h-[420px]">
-          <div>
-            <div className="flex justify-between items-center border-b border-[#162334] pb-3 mb-4">
-              <div>
-                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">Aethelgard OS Neural Researcher AI</h3>
-                <span className="text-[10px] text-slate-400 font-sans">Active feedback and collaborative hypothesis loop</span>
-              </div>
-              <span className="text-[10px] font-mono text-cyan-400 animate-pulse">● FEEDBACK CORE ONLINE</span>
+        <div className="lg:col-span-8 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col min-h-[500px]">
+          
+          <div className="flex justify-between items-center border-b border-[#1e2d4a] pb-4 mb-6">
+            <div>
+              <h3 className="text-sm font-mono font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                <Network size={16} className="text-cyan-400" /> Aethelgard Neural Handshake
+              </h3>
+              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-widest block mt-1">Active feedback and collaborative hypothesis loop</span>
             </div>
-
-            {/* Messages stage */}
-            <div className="space-y-4 max-h-[260px] overflow-y-auto mb-4 font-sans text-xs scrollbar-thin scrollbar-thumb-cyan-950 pr-1 select-text">
-              {messages.map((m) => (
-                <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`p-3 rounded-xl max-w-[85%] border shadow-md relative ${
-                    m.sender === "user" ? "bg-cyan-950/20 border-cyan-500/30 text-white" : "bg-[#0b0f19] border-[#1a2336] text-slate-300"
-                  }`}>
-                    <span className="text-[9px] font-mono text-slate-500 block mb-1">
-                      {m.sender === "user" ? "Doctor Vance" : "Neural OS Core"} ({m.timestamp})
-                    </span>
-                    <p className="leading-relaxed whitespace-pre-wrap select-text font-sans">{m.text}</p>
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="p-3 bg-[#0b0f19] border border-[#1a2336] rounded-xl text-slate-400">
-                    <span className="text-[9px] font-mono text-cyan-400 block mb-1">Neural Core</span>
-                    <div className="flex space-x-1.5 py-1">
-                      <span className="h-1.5 w-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="h-1.5 w-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="h-1.5 w-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messageEndRef}></div>
+            <div className="flex items-center gap-2 bg-cyan-500/10 px-3 py-1.5 rounded-lg border border-cyan-500/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-widest font-bold">Core Online</span>
             </div>
           </div>
 
+          {/* Messages stage */}
+          <div className="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar space-y-6">
+            {messages.map((m) => (
+              <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`p-4 rounded-2xl max-w-[85%] relative group ${
+                  m.sender === "user" 
+                    ? "bg-cyan-500/10 border border-cyan-500/30 text-white rounded-tr-sm" 
+                    : "bg-[#050811] border border-[#1e2d4a] text-slate-300 rounded-tl-sm"
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${m.sender === 'user' ? 'bg-cyan-400' : 'bg-purple-400'}`}></span>
+                    <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-bold flex-1">
+                      {m.sender === "user" ? "Doctor Vance" : "Neural OS Core"}
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-600">{m.timestamp}</span>
+                  </div>
+                  <p className="leading-relaxed whitespace-pre-wrap font-sans text-sm">{m.text}</p>
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="p-4 bg-[#050811] border border-[#1e2d4a] rounded-2xl rounded-tl-sm text-slate-400">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-widest font-bold">Processing</span>
+                  </div>
+                  <div className="flex space-x-2 py-2 px-1">
+                    <span className="h-2 w-2 bg-cyan-400/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="h-2 w-2 bg-cyan-400/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="h-2 w-2 bg-cyan-400/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messageEndRef}></div>
+          </div>
+
           {/* Submission bar */}
-          <form onSubmit={handleSendMessage} className="flex space-x-2 mt-2">
-            <input 
-              type="text" 
-              placeholder="Query the Neural Universe regarding biological coherence, synapses, logic gates..."
-              value={inputVal}
-              onChange={e => setInputVal(e.target.value)}
-              className="flex-1 bg-[#090d15] border border-[#1b2b40] text-white placeholder-slate-500 text-xs px-3.5 py-3 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-            />
-            <button 
-              type="submit"
-              disabled={isTyping}
-              className="bg-cyan-500 hover:bg-cyan-600 text-black px-5 py-3 rounded-lg text-xs font-mono font-bold flex items-center space-x-1 transition disabled:opacity-40"
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span>HANDSHAKE</span>
-            </button>
+          <form onSubmit={handleSendMessage} className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+            <div className="relative flex gap-3 bg-[#050811] p-2 rounded-xl border border-[#1e2d4a]">
+              <input 
+                type="text" 
+                placeholder="Query the Neural Universe regarding biological coherence..."
+                value={inputVal}
+                onChange={e => setInputVal(e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-slate-600 text-sm px-4 py-2 focus:outline-none font-sans"
+              />
+              <button 
+                type="submit"
+                disabled={isTyping || !inputVal.trim()}
+                className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400 px-6 py-2 rounded-lg text-[10px] uppercase tracking-widest font-mono font-bold flex items-center space-x-2 transition-all disabled:opacity-40 disabled:hover:bg-cyan-500/10 disabled:hover:border-cyan-500/30"
+              >
+                <Send size={14} />
+                <span>Transmit</span>
+              </button>
+            </div>
           </form>
         </div>
 
         {/* Left Sidebars: Uploaded Papers & Active Notes context values */}
-        <div id="ai-papers-context-sidebar" className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-6 flex flex-col h-full">
+          
           {/* Active Workstation notes panel */}
-          <div className="bg-[#0b0f19]/80 border border-[#1a2536] p-4 rounded-xl shadow-lg space-y-3">
-            <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider block">Active Notes Workspace</span>
+          <div className="bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] p-6 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)] flex-1 flex flex-col">
+            <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
+              <FileText size={14} /> Active Notes Workspace
+            </span>
             <textarea 
               value={activeNotes}
               onChange={e => setActiveNotes(e.target.value)}
-              className="w-full bg-[#070b13] border border-[#182334] rounded-lg p-2.5 text-xs text-slate-350 leading-relaxed font-sans focus:outline-none focus:border-cyan-500 h-24 resize-none"
+              className="w-full flex-1 min-h-[120px] bg-[#050811] border border-[#1e2d4a] rounded-xl p-4 text-sm text-slate-300 leading-relaxed font-sans focus:outline-none focus:border-cyan-500/50 resize-none custom-scrollbar"
               placeholder="Incorporate active scientific notes to append to contextual chatbot handshakes..."
             />
-            <p className="text-[9px] text-slate-500 font-mono">* Adjusting these notes appended inline automatically to prompt generation calls.</p>
+            <p className="text-[9px] text-slate-500 font-mono mt-3 uppercase tracking-widest flex items-center gap-1.5 bg-[#050811] p-2 rounded-lg border border-[#1e2d4a]">
+              <Eye size={12} className="text-cyan-400" /> Notes act as context parameters.
+            </p>
           </div>
 
           {/* Uploaded Papers toggle checkbox list columns */}
-          <div className="bg-[#0b0f19]/80 border border-[#1a2536] p-4 rounded-xl shadow-lg space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider">Semantic PDF Sources</span>
+          <div className="bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] p-6 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                <Bookmark size={14} /> Semantic PDF Sources
+              </span>
               <button 
                 onClick={handleUploadPaperMock}
-                className="p-1.5 bg-[#121c2e] hover:bg-cyan-950 border border-cyan-500/30 text-cyan-400 hover:text-white rounded transition text-[10px] font-mono flex items-center space-x-1"
+                className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-lg transition-all text-[9px] uppercase tracking-widest font-mono font-bold flex items-center space-x-1"
               >
-                <Plus className="h-3 w-3" />
-                <span>UPLOAD</span>
+                <Plus size={12} />
+                <span>Upload</span>
               </button>
             </div>
 
-            <div className="space-y-2" id="papers-checkbox-group">
+            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
               {uploadedPapers.map((paper) => (
                 <div 
                   key={paper.id}
                   onClick={() => handleTogglePaper(paper.id)}
-                  className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
-                    paper.active ? "bg-cyan-950/20 border-cyan-500/30 hover:border-cyan-400/50" : "bg-[#060a12]/50 border-[#142031] hover:border-slate-700"
+                  className={`p-3 rounded-xl border transition-all duration-300 cursor-pointer flex items-center justify-between group ${
+                    paper.active ? "bg-emerald-500/10 border-emerald-500/40 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]" : "bg-[#050811] border-[#1e2d4a] hover:border-slate-600"
                   }`}
                 >
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <FileText className={`h-4 w-4 shrink-0 ${paper.active ? "text-cyan-400" : "text-slate-500"}`} />
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className={`p-2 rounded-lg border ${paper.active ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-[#090d1a] border-[#1e2d4a] text-slate-500'}`}>
+                      <FileText size={14} />
+                    </div>
                     <div className="truncate pr-2">
-                      <span className={`text-[11px] font-medium block truncate ${paper.active ? "text-white" : "text-slate-500"}`}>{paper.name}</span>
-                      <span className="text-[9px] text-slate-500 block font-mono">{paper.size} • {paper.citations} cits Mapped</span>
+                      <span className={`text-xs font-sans font-bold block truncate transition-colors ${paper.active ? "text-white" : "text-slate-400 group-hover:text-slate-200"}`}>{paper.name}</span>
+                      <span className="text-[9px] text-slate-500 block font-mono uppercase tracking-widest mt-0.5">{paper.size} • {paper.citations} Cits</span>
                     </div>
                   </div>
 
-                  {/* Toggle Indicator indicator */}
-                  <div className={`h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${
-                    paper.active ? "bg-cyan-500 border-cyan-500" : "border-[#1c2e45]"
+                  {/* Toggle Indicator */}
+                  <div className={`h-4 w-4 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                    paper.active ? "bg-emerald-500/20 border-emerald-500/50" : "bg-[#090d1a] border-[#1e2d4a]"
                   }`}>
-                    {paper.active && <span className="h-1.5 w-1.5 bg-black rounded-full"></span>}
+                    {paper.active && <span className="h-2 w-2 bg-emerald-400 rounded-sm shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>}
                   </div>
                 </div>
               ))}
