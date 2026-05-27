@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Cpu, Server, Activity, Flame, ShieldCheck, Zap, Terminal, Plus, RefreshCw, Layers } from "lucide-react";
+import { Cpu, Server, Activity, Flame, ShieldCheck, Zap, Terminal, Plus, RefreshCw, Layers, Database, Radio, Network } from "lucide-react";
 import { AgentNode } from "../types";
 
 export function NeuralCore() {
@@ -80,194 +80,223 @@ export function NeuralCore() {
   };
 
   return (
-    <div id="neural-core-screen" className="space-y-6">
+    <div id="neural-core-screen" className="min-h-screen w-full bg-[#050811] text-slate-300 font-sans relative overflow-x-hidden p-6 flex flex-col gap-6">
+      {/* Immersive Background */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSIjMTUyMDM2IiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuMiI+PHBhdGggZD0iTTAgNjBoNjBNNjAgMGYtNjAgNjAiLz48L2c+PC9zdmc+')] pointer-events-none z-0 opacity-40"></div>
+      
+      {/* Ambient Orbs */}
+      <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[150px] pointer-events-none animate-[pulse_10s_infinite] z-0" />
+      <div className="fixed bottom-[10%] right-[-10%] w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none animate-[pulse_15s_infinite] z-0" />
+
       {/* 1. Header KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" id="core-kpis-grid">
-        <div id="kpi-load-card" className="bg-[#0b0f19]/80 border border-[#1a2536] rounded-xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 left-0 h-[2px] bg-cyan-400 w-1/3 group-hover:w-full transition-all duration-700"></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10" id="core-kpis-grid">
+        <div id="kpi-load-card" className="bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 h-[2px] bg-cyan-400 w-1/3 group-hover:w-full transition-all duration-700 shadow-[0_0_10px_rgba(6,182,212,0.8)]"></div>
+          <div className="absolute right-0 bottom-0 w-32 h-32 bg-cyan-500/10 rounded-tl-full blur-xl pointer-events-none transition-opacity opacity-50 group-hover:opacity-100"></div>
           <div>
-            <span className="text-xs uppercase tracking-wider text-slate-400 block font-mono">GLOBAL LOAD</span>
-            <span className="text-3xl font-mono font-bold text-white block mt-1">{globalLoad}%</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500 block font-mono font-bold">Global Load</span>
+            <span className="text-4xl font-display font-bold text-white block mt-2 tracking-wide">{globalLoad}%</span>
           </div>
-          <div className="p-3 bg-cyan-950/40 rounded-lg border border-cyan-500/20">
-            <Cpu className="h-6 w-6 text-cyan-400 animate-pulse" />
+          <div className="p-4 bg-cyan-500/10 rounded-xl border border-cyan-500/20 shadow-[inset_0_0_15px_rgba(6,182,212,0.1)] group-hover:shadow-[inset_0_0_20px_rgba(6,182,212,0.3)] transition-all">
+            <Cpu className="h-8 w-8 text-cyan-400 animate-[pulse_2s_infinite]" />
           </div>
         </div>
 
-        <div id="kpi-throughput-card" className="bg-[#0b0f19]/80 border border-[#1a2536] rounded-xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 left-0 h-[2px] bg-emerald-400 w-1/3 group-hover:w-full transition-all duration-700"></div>
+        <div id="kpi-throughput-card" className="bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 h-[2px] bg-emerald-400 w-1/3 group-hover:w-full transition-all duration-700 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+          <div className="absolute right-0 bottom-0 w-32 h-32 bg-emerald-500/10 rounded-tl-full blur-xl pointer-events-none transition-opacity opacity-50 group-hover:opacity-100"></div>
           <div>
-            <span className="text-xs uppercase tracking-wider text-slate-400 block font-mono">THROUGHPUT</span>
-            <span className="text-3xl font-mono font-bold text-white block mt-1">{throughput} GB/s</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500 block font-mono font-bold">Throughput</span>
+            <span className="text-4xl font-display font-bold text-white block mt-2 tracking-wide">{throughput} <span className="text-lg text-emerald-400">GB/s</span></span>
           </div>
-          <div className="p-3 bg-emerald-950/40 rounded-lg border border-emerald-500/20">
-            <Activity className="h-6 w-6 text-emerald-400" />
+          <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 shadow-[inset_0_0_15px_rgba(16,185,129,0.1)] group-hover:shadow-[inset_0_0_20px_rgba(16,185,129,0.3)] transition-all">
+            <Activity className="h-8 w-8 text-emerald-400" />
           </div>
         </div>
 
-        <div id="kpi-time-card" className="bg-[#0b0f19]/80 border border-[#1a2536] rounded-xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute top-0 left-0 h-[2px] bg-purple-400 w-1/3 group-hover:w-full transition-all duration-700"></div>
+        <div id="kpi-time-card" className="bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 flex items-center justify-between shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 h-[2px] bg-purple-400 w-1/3 group-hover:w-full transition-all duration-700 shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
+          <div className="absolute right-0 bottom-0 w-32 h-32 bg-purple-500/10 rounded-tl-full blur-xl pointer-events-none transition-opacity opacity-50 group-hover:opacity-100"></div>
           <div>
-            <span className="text-xs uppercase tracking-wider text-slate-400 block font-mono">ACTIVE INSTANCE IP</span>
-            <span className="text-2xl font-mono font-bold text-white block mt-1">AETHEL.NODE.LOCAL</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500 block font-mono font-bold">Active Instance IP</span>
+            <span className="text-2xl font-mono font-bold text-white block mt-2 tracking-widest">AETHEL.NODE</span>
           </div>
-          <div className="p-3 bg-purple-950/40 rounded-lg border border-purple-500/20">
-            <Server className="h-6 w-6 text-purple-400" />
+          <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/20 shadow-[inset_0_0_15px_rgba(168,85,247,0.1)] group-hover:shadow-[inset_0_0_20px_rgba(168,85,247,0.3)] transition-all">
+            <Server className="h-8 w-8 text-purple-400" />
           </div>
         </div>
       </div>
 
       {/* 2. Orbit Map / Core Visualizer */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="core-main-interactive">
-        <div id="orbit-graph-panel" className="lg:col-span-8 bg-[#0b0f19]/80 border border-[#1a2536] rounded-xl p-6 shadow-lg flex flex-col justify-between min-h-[440px] relative">
-          <div className="flex justify-between items-center mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10 flex-1" id="core-main-interactive">
+        <div id="orbit-graph-panel" className="lg:col-span-8 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[500px] relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 pointer-events-none mix-blend-overlay"></div>
+          
+          <div className="flex justify-between items-center mb-6 relative z-10">
             <div>
-              <h2 className="text-sm font-semibold tracking-wide text-white uppercase font-mono">Central Agent Web Visualization</h2>
-              <span className="text-xs text-slate-400 font-mono">Dynamic multi-relay orchestration map</span>
+              <h2 className="text-lg font-bold font-display text-white tracking-wide flex items-center gap-3">
+                <Network className="text-cyan-400" size={24} /> Central Agent Web Visualization
+              </h2>
+              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-widest block mt-1">Dynamic multi-relay orchestration map</span>
             </div>
-            <div className="flex items-center space-x-2 text-[10px] bg-[#141b2b] text-slate-400 px-2 py-1 rounded border border-[#1e2a3c] font-mono">
+            <div className="flex items-center space-x-2 text-[9px] bg-cyan-500/10 text-cyan-400 px-3 py-1.5 rounded-lg border border-cyan-500/30 font-mono uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(6,182,212,0.2)]">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping"></span>
-              <span>SYNAPSES ACTIVE</span>
+              <span>Synapses Active</span>
             </div>
           </div>
 
           {/* SVG Orbit Graphic */}
-          <div className="flex-1 flex items-center justify-center relative min-h-[280px]">
-            <svg viewBox="0 0 500 400" className="w-full max-w-[460px] h-auto">
+          <div className="flex-1 flex items-center justify-center relative min-h-[380px] z-10">
+            <svg viewBox="0 0 500 400" className="w-full max-w-[500px] h-auto drop-shadow-[0_0_20px_rgba(6,182,212,0.1)]">
               <defs>
                 <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#00f3ff" stopOpacity="0.2" />
+                  <stop offset="0%" stopColor="#00f3ff" stopOpacity="0.3" />
                   <stop offset="100%" stopColor="#0b0f19" stopOpacity="0" />
                 </radialGradient>
                 <linearGradient id="cyber-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#00f3ff" />
                   <stop offset="100%" stopColor="#0ea5e9" />
                 </linearGradient>
+                <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
 
               {/* Pulsing Glow behind master core */}
-              <circle cx="250" cy="200" r="110" fill="url(#glow)" className="animate-pulse" />
+              <circle cx="250" cy="200" r="140" fill="url(#glow)" className="animate-[pulse_4s_infinite]" />
 
               {/* Orbiting Ring Trails */}
-              <circle cx="250" cy="200" r="120" fill="none" stroke="#1d2e47" strokeWidth="1" strokeDasharray="5 7" />
-              <circle cx="250" cy="200" r="140" fill="none" stroke="#253a59" strokeWidth="0.5" />
+              <circle cx="250" cy="200" r="130" fill="none" stroke="#1e2d4a" strokeWidth="1.5" strokeDasharray="5 10" className="animate-[spin_60s_linear_infinite]" style={{ transformOrigin: '250px 200px' }} />
+              <circle cx="250" cy="200" r="160" fill="none" stroke="#2d3f61" strokeWidth="0.5" className="animate-[spin_90s_linear_infinite_reverse]" style={{ transformOrigin: '250px 200px' }} />
 
               {/* Laser Synapse connection lines syncing with agent detail */}
               {/* Line: Master -> Knowledge */}
-              <line x1="250" y1="200" x2="360" y2="130" stroke={selectedAgentId === "ocr" ? "#00f3ff" : "#1e3350"} strokeWidth="1.5" strokeDasharray="3 3" />
+              <line x1="250" y1="200" x2="380" y2="110" stroke={selectedAgentId === "ocr" ? "#00f3ff" : "#1e2d4a"} strokeWidth={selectedAgentId === "ocr" ? "2" : "1"} strokeDasharray="4 4" />
               {/* Line: Master -> Research */}
-              <line x1="250" y1="200" x2="350" y2="280" stroke={selectedAgentId === "research" ? "#22c55e" : "#1e3350"} strokeWidth="1.5" />
+              <line x1="250" y1="200" x2="370" y2="290" stroke={selectedAgentId === "research" ? "#10b981" : "#1e2d4a"} strokeWidth={selectedAgentId === "research" ? "2" : "1"} />
               {/* Line: Master -> Vector Memory */}
-              <line x1="250" y1="200" x2="150" y2="280" stroke={selectedAgentId === "memory" ? "#b7791f" : "#1e3350"} strokeWidth="1.5" />
+              <line x1="250" y1="200" x2="130" y2="290" stroke={selectedAgentId === "memory" ? "#f59e0b" : "#1e2d4a"} strokeWidth={selectedAgentId === "memory" ? "2" : "1"} />
               {/* Line: Master -> PPT Studio */}
-              <line x1="250" y1="200" x2="140" y2="130" stroke={selectedAgentId === "ppt" ? "#a855f7" : "#1e3350"} strokeWidth="1.5" />
+              <line x1="250" y1="200" x2="120" y2="110" stroke={selectedAgentId === "ppt" ? "#a855f7" : "#1e2d4a"} strokeWidth={selectedAgentId === "ppt" ? "2" : "1"} />
 
               {/* Dynamic glowing particles flowing along synapses */}
-              <circle cx="250" cy="200" r="4" fill="#00f3ff">
-                <animateMotion path="M 250 200 L 360 130" dur="2s" repeatCount="indefinite" />
+              <circle cx="250" cy="200" r="3" fill="#00f3ff" filter="url(#neon-glow)">
+                <animateMotion path="M 250 200 L 380 110" dur="2s" repeatCount="indefinite" />
               </circle>
-              <circle cx="250" cy="200" r="4" fill="#10b981">
-                <animateMotion path="M 250 200 L 350 280" dur="2.5s" repeatCount="indefinite" />
+              <circle cx="250" cy="200" r="3" fill="#10b981" filter="url(#neon-glow)">
+                <animateMotion path="M 250 200 L 370 290" dur="2.5s" repeatCount="indefinite" />
               </circle>
-              <circle cx="250" cy="200" r="4" fill="#a855f7">
-                <animateMotion path="M 250 200 L 140 130" dur="3s" repeatCount="indefinite" />
+              <circle cx="250" cy="200" r="3" fill="#a855f7" filter="url(#neon-glow)">
+                <animateMotion path="M 250 200 L 120 110" dur="3s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="250" cy="200" r="3" fill="#f59e0b" filter="url(#neon-glow)">
+                <animateMotion path="M 250 200 L 130 290" dur="2.8s" repeatCount="indefinite" />
               </circle>
 
               {/* Central Master Node */}
-              <g className="cursor-pointer" onClick={() => setSelectedAgentId("master")}>
-                <circle cx="250" cy="200" r="32" fill="#091424" stroke="#00f3ff" strokeWidth="2" className="transition-all duration-300 hover:r-35" />
-                <circle cx="250" cy="200" r="26" fill="none" stroke="#0ea5e9" strokeWidth="1" strokeDasharray="4 2" className="animate-spin" style={{ transformOrigin: 'center', animationDuration: '10s' }} />
-                <Cpu x="238" y="188" width="24" height="24" className="text-cyan-400" />
-                <text x="250" y="248" fill="#fff" fontSize="10" fontFamily="monospace" textAnchor="middle" className="font-bold">MASTER OS</text>
+              <g className="cursor-pointer transition-all hover:scale-110" style={{ transformOrigin: '250px 200px' }} onClick={() => setSelectedAgentId("master")}>
+                <circle cx="250" cy="200" r="38" fill="#050811" stroke={selectedAgentId === "master" ? "#00f3ff" : "#0ea5e9"} strokeWidth="2" filter="url(#neon-glow)" />
+                <circle cx="250" cy="200" r="32" fill="none" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="8 4" className="animate-[spin_10s_linear_infinite]" style={{ transformOrigin: '250px 200px' }} />
+                <Cpu x="236" y="186" width="28" height="28" className="text-cyan-400" />
+                <text x="250" y="258" fill="#fff" fontSize="11" fontFamily="monospace" textAnchor="middle" className="font-bold tracking-widest drop-shadow-md">MASTER OS</text>
               </g>
 
               {/* Satellite 1: OCR Scanner (Top Right) */}
-              <g className="cursor-pointer" onClick={() => setSelectedAgentId("ocr")}>
-                <circle cx="360" cy="130" r="18" fill="#0c111e" stroke={selectedAgentId === "ocr" ? "#00f3ff" : "#1e2a40"} strokeWidth="1.5" />
-                <Server x="351" y="121" width="18" height="18" className={selectedAgentId === "ocr" ? "text-cyan-400" : "text-slate-400"} />
-                <text x="360" y="160" fill="#cbd5e1" fontSize="9" fontFamily="monospace" textAnchor="middle">OCR Scanner</text>
+              <g className="cursor-pointer transition-all hover:scale-110" style={{ transformOrigin: '380px 110px' }} onClick={() => setSelectedAgentId("ocr")}>
+                <circle cx="380" cy="110" r="22" fill="#050811" stroke={selectedAgentId === "ocr" ? "#00f3ff" : "#1e2d4a"} strokeWidth="2" filter={selectedAgentId === "ocr" ? "url(#neon-glow)" : ""} />
+                <Database x="368" y="98" width="24" height="24" className={selectedAgentId === "ocr" ? "text-cyan-400" : "text-slate-500"} />
+                <text x="380" y="148" fill={selectedAgentId === "ocr" ? "#fff" : "#94a3b8"} fontSize="10" fontFamily="monospace" textAnchor="middle" className="tracking-wider font-bold">OCR Scanner</text>
               </g>
 
               {/* Satellite 2: Research Core (Bottom Right) */}
-              <g className="cursor-pointer" onClick={() => setSelectedAgentId("research")}>
-                <circle cx="350" cy="280" r="18" fill="#0c111e" stroke={selectedAgentId === "research" ? "#22c55e" : "#1e2a40"} strokeWidth="1.5" />
-                <Activity x="341" y="271" width="18" height="18" className={selectedAgentId === "research" ? "text-emerald-400 animate-bounce" : "text-slate-400"} />
-                <text x="350" y="310" fill="#cbd5e1" fontSize="9" fontFamily="monospace" textAnchor="middle">Research Core</text>
+              <g className="cursor-pointer transition-all hover:scale-110" style={{ transformOrigin: '370px 290px' }} onClick={() => setSelectedAgentId("research")}>
+                <circle cx="370" cy="290" r="22" fill="#050811" stroke={selectedAgentId === "research" ? "#10b981" : "#1e2d4a"} strokeWidth="2" filter={selectedAgentId === "research" ? "url(#neon-glow)" : ""} />
+                <Activity x="358" y="278" width="24" height="24" className={selectedAgentId === "research" ? "text-emerald-400 animate-pulse" : "text-slate-500"} />
+                <text x="370" y="328" fill={selectedAgentId === "research" ? "#fff" : "#94a3b8"} fontSize="10" fontFamily="monospace" textAnchor="middle" className="tracking-wider font-bold">Research Core</text>
               </g>
 
               {/* Satellite 3: Vector Memory (Bottom Left) */}
-              <g className="cursor-pointer" onClick={() => setSelectedAgentId("memory")}>
-                <circle cx="150" cy="280" r="18" fill="#0c111e" stroke={selectedAgentId === "memory" ? "#eab308" : "#1e2a40"} strokeWidth="1.5" />
-                <Layers x="141" y="271" width="18" height="18" className={selectedAgentId === "memory" ? "text-yellow-400" : "text-slate-400"} />
-                <text x="150" y="310" fill="#cbd5e1" fontSize="9" fontFamily="monospace" textAnchor="middle">Memory</text>
+              <g className="cursor-pointer transition-all hover:scale-110" style={{ transformOrigin: '130px 290px' }} onClick={() => setSelectedAgentId("memory")}>
+                <circle cx="130" cy="290" r="22" fill="#050811" stroke={selectedAgentId === "memory" ? "#f59e0b" : "#1e2d4a"} strokeWidth="2" filter={selectedAgentId === "memory" ? "url(#neon-glow)" : ""} />
+                <Layers x="118" y="278" width="24" height="24" className={selectedAgentId === "memory" ? "text-amber-400" : "text-slate-500"} />
+                <text x="130" y="328" fill={selectedAgentId === "memory" ? "#fff" : "#94a3b8"} fontSize="10" fontFamily="monospace" textAnchor="middle" className="tracking-wider font-bold">Memory</text>
               </g>
 
               {/* Satellite 4: PPT presentation Studio (Top Left) */}
-              <g className="cursor-pointer" onClick={() => setSelectedAgentId("ppt")}>
-                <circle cx="140" cy="130" r="18" fill="#0c111e" stroke={selectedAgentId === "ppt" ? "#a855f7" : "#1e2a40"} strokeWidth="1.5" />
-                <Zap x="131" y="121" width="18" height="18" className={selectedAgentId === "ppt" ? "text-purple-400" : "text-slate-400"} />
-                <text x="140" y="160" fill="#cbd5e1" fontSize="9" fontFamily="monospace" textAnchor="middle">PPT Agent</text>
+              <g className="cursor-pointer transition-all hover:scale-110" style={{ transformOrigin: '120px 110px' }} onClick={() => setSelectedAgentId("ppt")}>
+                <circle cx="120" cy="110" r="22" fill="#050811" stroke={selectedAgentId === "ppt" ? "#a855f7" : "#1e2d4a"} strokeWidth="2" filter={selectedAgentId === "ppt" ? "url(#neon-glow)" : ""} />
+                <Zap x="108" y="98" width="24" height="24" className={selectedAgentId === "ppt" ? "text-purple-400" : "text-slate-500"} />
+                <text x="120" y="148" fill={selectedAgentId === "ppt" ? "#fff" : "#94a3b8"} fontSize="10" fontFamily="monospace" textAnchor="middle" className="tracking-wider font-bold">PPT Agent</text>
               </g>
             </svg>
 
             {/* Quick interactive floating tutorial hand */}
-            <div className="absolute bottom-2 left-6 text-[10px] text-slate-500 font-mono flex items-center space-x-1">
-              <span>* Click on any orbiting satellite node to view detailed diagnostics</span>
+            <div className="absolute bottom-0 left-4 text-[9px] text-slate-500 font-mono uppercase tracking-widest flex items-center space-x-2 bg-[#050811] px-3 py-1.5 rounded-lg border border-[#1e2d4a]">
+              <Radio size={12} className="text-cyan-400 animate-pulse" />
+              <span>Click satellite node for diagnostics</span>
             </div>
           </div>
         </div>
 
         {/* Selected Agent Details Card */}
-        <div id="agent-diagnostics-panel" className="lg:col-span-4 bg-[#0b0f19]/80 border border-[#1a2536] rounded-xl p-5 shadow-lg flex flex-col justify-between border-l-cyan-500/40">
-          <div className="space-y-4">
+        <div id="agent-diagnostics-panel" className="lg:col-span-4 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col justify-between border-t-4 transition-colors duration-500" 
+             style={{ borderTopColor: selectedAgent.id === 'research' ? '#10b981' : selectedAgent.id === 'ppt' ? '#a855f7' : selectedAgent.id === 'memory' ? '#f59e0b' : '#00f3ff' }}>
+          
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-cyan-400 tracking-wider font-semibold uppercase">AGENT WORKSPACE DETECTED</span>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-semibold ${
+              <span className="text-[10px] font-mono text-slate-400 tracking-widest font-bold uppercase flex items-center gap-2">
+                <Terminal size={14} /> Agent Diagnostic
+              </span>
+              <span className={`text-[9px] font-mono px-3 py-1 rounded-md uppercase font-bold tracking-widest ${
                 selectedAgent.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
                 selectedAgent.status === 'syncing' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30 animate-pulse' :
-                'bg-slate-500/10 text-slate-400 border border-slate-500/30'
+                'bg-slate-800/50 text-slate-400 border border-slate-700'
               }`}>
                 {selectedAgent.status}
               </span>
             </div>
 
             <div>
-              <h3 className="text-lg font-bold text-white font-mono">{selectedAgent.name}</h3>
-              <p className="text-xs text-slate-400 mt-1">{selectedAgent.role}</p>
+              <h3 className="text-2xl font-bold text-white font-display tracking-wide">{selectedAgent.name}</h3>
+              <p className="text-sm text-cyan-400 font-mono mt-1">{selectedAgent.role}</p>
             </div>
 
-            <div className="pt-2 border-t border-[#1e2a3c]">
-              <div className="flex justify-between items-center mb-1 text-xs">
-                <span className="text-slate-400 font-mono">Quantum Synaptic Flow Level</span>
-                <span className="text-white font-bold font-mono">{selectedAgent.load}%</span>
+            <div className="pt-4 border-t border-[#1e2d4a]">
+              <div className="flex justify-between items-center mb-2 text-xs">
+                <span className="text-slate-400 font-mono uppercase tracking-widest text-[9px]">Quantum Synaptic Flow</span>
+                <span className="text-white font-bold font-mono text-sm">{selectedAgent.load}%</span>
               </div>
-              <div className="w-full bg-[#111827] rounded-full h-2 overflow-hidden border border-[#1e2a3c]">
+              <div className="w-full bg-[#050811] rounded-full h-2.5 overflow-hidden border border-[#1e2d4a] shadow-inner">
                 <div 
-                  className={`h-full transition-all duration-1000 ${
-                    selectedAgent.id === 'research' ? 'bg-emerald-400' :
-                    selectedAgent.id === 'ppt' ? 'bg-purple-400' :
-                    selectedAgent.id === 'memory' ? 'bg-yellow-400' :
-                    'bg-cyan-400'
-                  }`} 
-                  style={{ width: `${selectedAgent.load}%` }}
-                ></div>
+                  className={`h-full transition-all duration-1000 relative`}
+                  style={{ 
+                    width: `${selectedAgent.load}%`,
+                    backgroundColor: selectedAgent.id === 'research' ? '#10b981' : selectedAgent.id === 'ppt' ? '#a855f7' : selectedAgent.id === 'memory' ? '#f59e0b' : '#00f3ff'
+                  }}
+                >
+                  <div className="absolute inset-0 bg-white/20 w-full animate-[slide_2s_linear_infinite]" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)' }}></div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2 mt-4 bg-[#060a13] p-3 rounded-lg border border-[#182236]">
-              <span className="text-[10px] font-mono font-medium text-slate-500 block uppercase">Functional Topology Profile</span>
-              <p className="text-xs text-slate-300 leading-relaxed font-sans">{selectedAgent.description}</p>
+            <div className="bg-[#050811] p-4 rounded-xl border border-[#1e2d4a] shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]">
+              <span className="text-[9px] font-mono font-bold text-slate-500 block uppercase tracking-widest mb-2 border-b border-[#1e2d4a] pb-2">Functional Topology Profile</span>
+              <p className="text-sm text-slate-300 leading-relaxed font-sans">{selectedAgent.description}</p>
             </div>
           </div>
 
-          <div className="pt-5" id="agent-quick-actions">
+          <div className="pt-6 mt-4 border-t border-[#1e2d4a]" id="agent-quick-actions">
             <button 
               onClick={() => {
                 alert(`Target agent cycle refreshed: Synchronizing neural links in ${selectedAgent.name}...`);
               }}
-              className="w-full flex items-center justify-center space-x-2 bg-[#121c2c] hover:bg-[#1a293f] text-cyan-300 hover:text-white border border-cyan-500/30 hover:border-cyan-400 py-2.5 rounded-lg text-xs font-mono font-medium transition-all"
+              className="w-full flex items-center justify-center space-x-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400 py-3 rounded-xl text-[10px] font-mono font-bold tracking-widest uppercase transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]"
             >
-              <RefreshCw className="h-4 w-4 animate-spin" style={{ animationDuration: '6s' }} />
+              <RefreshCw className="h-4 w-4" />
               <span>Optimise Handshake Index</span>
             </button>
           </div>
@@ -275,35 +304,35 @@ export function NeuralCore() {
       </div>
 
       {/* 3. Third Row: Inter-Agent Live Relay Logs & Mini Holographic Health */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="core-bottom-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10" id="core-bottom-grid">
         {/* Terminal Logger */}
-        <div id="agent-logger-terminal" className="lg:col-span-8 bg-[#070b13] border border-[#1a2536] rounded-xl p-5 shadow-lg flex flex-col justify-between">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center space-x-2">
-              <Terminal className="h-4 w-4 text-cyan-400" />
-              <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">Inter-Agent Communications</h3>
+        <div id="agent-logger-terminal" className="lg:col-span-8 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[300px]">
+          <div className="flex justify-between items-center mb-4 border-b border-[#1e2d4a] pb-4">
+            <div className="flex items-center space-x-3">
+              <Terminal className="h-5 w-5 text-cyan-400" />
+              <h3 className="text-sm font-mono font-bold text-white uppercase tracking-widest">Inter-Agent Communications</h3>
             </div>
-            <span className="text-[10px] font-mono text-slate-500">SYSTEM REBOOT: 6 Days Ago</span>
+            <span className="text-[9px] font-mono text-slate-500 bg-[#050811] px-2 py-1 rounded border border-[#1e2d4a] uppercase tracking-widest">Sys. Reboot: 6 Days Ago</span>
           </div>
 
           {/* Logs Area */}
-          <div className="space-y-2 max-h-[180px] overflow-y-auto mb-4 font-mono text-xs pr-1 scrollbar-thin scrollbar-thumb-cyan-950">
+          <div className="flex-1 overflow-y-auto mb-4 font-mono text-xs pr-2 custom-scrollbar space-y-3">
             {logs.map((log) => (
-              <div key={log.id} className="p-2.5 rounded bg-[#0b0f19] border border-[#151f2f] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 hover:border-cyan-500/25 transition-all">
-                <div className="flex items-center space-x-2 min-w-0">
-                  <span className="text-slate-500 text-[10px]">{log.time}</span>
-                  <div className="flex items-center space-x-1">
-                    <span className="text-white font-semibold">{log.from}</span>
-                    <span className="text-slate-500">➜</span>
-                    <span className="text-cyan-400">{log.to}</span>
+              <div key={log.id} className="p-3 rounded-xl bg-[#050811] border border-[#1e2d4a] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-cyan-500/30 transition-all group">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <span className="text-slate-600 text-[10px]">{log.time}</span>
+                  <div className="flex items-center space-x-2 bg-[#090d1a] px-2 py-1 rounded-md border border-[#1e2d4a]">
+                    <span className="text-white font-bold text-[10px]">{log.from}</span>
+                    <span className="text-slate-600 text-[10px]">➜</span>
+                    <span className="text-cyan-400 font-bold text-[10px]">{log.to}</span>
                   </div>
                 </div>
-                <p className="text-slate-300 truncate text-[11px] sm:max-w-[420px]">{log.msg}</p>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded self-start sm:self-center shrink-0 ${
-                  log.type === "success" ? "bg-emerald-950/40 text-emerald-400 border border-emerald-500/10" :
-                  log.type === "warning" ? "bg-amber-950/40 text-amber-400 border border-amber-500/10" :
-                  log.type === "user" ? "bg-cyan-950/40 text-cyan-300 border border-cyan-500/30" :
-                  "bg-[#131d2b] text-slate-300"
+                <p className="text-slate-300 truncate text-xs sm:max-w-[400px] font-sans group-hover:text-white transition-colors">{log.msg}</p>
+                <span className={`text-[9px] px-2 py-1 rounded-md uppercase tracking-widest font-bold shrink-0 ${
+                  log.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                  log.type === "warning" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                  log.type === "user" ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" :
+                  "bg-slate-800/50 text-slate-400 border border-slate-700"
                 }`}>
                   {log.type}
                 </span>
@@ -312,56 +341,63 @@ export function NeuralCore() {
           </div>
 
           {/* Prompt Submission */}
-          <form onSubmit={handleSendCommand} className="flex space-x-2 mt-1">
+          <form onSubmit={handleSendCommand} className="flex gap-3 mt-2 relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
             <input 
               type="text" 
-              placeholder={`Send instructions to ${selectedAgent.name}...`}
+              placeholder={`Transmit instruction packet to ${selectedAgent.name}...`}
               value={inputLog}
               onChange={(e) => setInputLog(e.target.value)}
-              className="flex-1 bg-[#101726]/80 border border-[#1d2a3f] text-white placeholder-slate-500 text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500 text-sans"
+              className="flex-1 bg-[#050811] relative z-10 border border-[#1e2d4a] text-white placeholder-slate-600 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-cyan-500/50 font-sans shadow-inner"
             />
             <button 
               type="submit"
-              className="bg-cyan-500 hover:bg-cyan-600 text-black px-4 py-2 rounded-lg text-xs font-mono font-medium flex items-center space-x-1 transition-all"
+              className="relative z-10 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400 px-6 py-3 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.2)]"
             >
-              <Plus className="h-3.5 w-3.5" />
-              <span>DISPATCH</span>
+              <Plus size={14} />
+              <span>Dispatch</span>
             </button>
           </form>
         </div>
 
         {/* Right side: Circular holographic health */}
-        <div id="holographic-health-panel" className="lg:col-span-4 bg-[#0b0f19]/80 border border-[#1a2536] rounded-xl p-5 shadow-lg flex flex-col justify-between">
+        <div id="holographic-health-panel" className="lg:col-span-4 bg-[#090d1a]/80 backdrop-blur-md border border-[#1e2d4a] rounded-2xl p-6 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[300px] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-cyan-500/20 transition-colors duration-700"></div>
+          
           <div>
-            <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider mb-4">Holographic Health Index</h3>
+            <h3 className="text-sm font-mono font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Activity size={16} className="text-cyan-400" /> Holographic Health
+            </h3>
             
-            <div className="flex items-center justify-center p-6 relative">
+            <div className="flex items-center justify-center relative">
               {/* Radial Meter with SVG */}
-              <div className="relative w-28 h-28 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="56" cy="56" r="48" fill="transparent" stroke="#101726" strokeWidth="6" />
-                  <circle cx="56" cy="56" r="48" fill="transparent" stroke="#06b6d4" strokeWidth="6" strokeDasharray="301" strokeDashoffset="75" className="transition-all duration-1000" />
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                  <circle cx="64" cy="64" r="54" fill="transparent" stroke="#1e2d4a" strokeWidth="6" />
+                  <circle cx="64" cy="64" r="54" fill="transparent" stroke="#00f3ff" strokeWidth="6" strokeDasharray="339" strokeDashoffset="84" className="transition-all duration-1000" />
+                  {/* Decorative inner ring */}
+                  <circle cx="64" cy="64" r="42" fill="transparent" stroke="#1e2d4a" strokeWidth="1" strokeDasharray="4 4" className="animate-[spin_20s_linear_infinite]" style={{ transformOrigin: 'center' }} />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-2xl font-mono font-bold text-white leading-none">75%</span>
-                  <span className="text-[9px] text-slate-400 font-mono mt-0.5 uppercase tracking-wide">OPTIMIZED</span>
+                  <span className="text-3xl font-display font-bold text-white leading-none tracking-wide">75%</span>
+                  <span className="text-[8px] text-cyan-400 font-mono mt-1 uppercase tracking-widest font-bold">Optimized</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 font-mono text-[11px] pt-2 border-t border-[#1a2536]">
-            <div className="flex justify-between text-slate-400">
-              <span>NEURAL TEMP:</span>
-              <span className="text-white flex items-center space-x-1">
-                <Flame className="h-3 w-3 text-amber-500 mr-0.5" />
+          <div className="space-y-3 font-mono text-[10px] pt-4 border-t border-[#1e2d4a] uppercase tracking-widest">
+            <div className="flex justify-between items-center text-slate-400 bg-[#050811] p-2 rounded-lg border border-[#1e2d4a]">
+              <span>Neural Temp</span>
+              <span className="text-white flex items-center gap-1 font-bold">
+                <Flame size={12} className="text-amber-500" />
                 32°C
               </span>
             </div>
-            <div className="flex justify-between text-slate-400">
-              <span>SYNC SYNAPSE ACCURACY:</span>
-              <span className="text-emerald-400 flex items-center space-x-1">
-                <ShieldCheck className="h-3 w-3 text-emerald-400 mr-0.5" />
+            <div className="flex justify-between items-center text-slate-400 bg-[#050811] p-2 rounded-lg border border-[#1e2d4a]">
+              <span>Sync Accuracy</span>
+              <span className="text-emerald-400 flex items-center gap-1 font-bold">
+                <ShieldCheck size={12} className="text-emerald-400" />
                 99.8%
               </span>
             </div>

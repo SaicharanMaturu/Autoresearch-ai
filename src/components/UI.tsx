@@ -1,14 +1,17 @@
 import React from 'react';
 
 // Enhanced Glassmorphic Card with Neural Glow
-export function GlassCard({ children, className = '', hover = true }: { children: React.ReactNode; className?: string; hover?: boolean }) {
+export function GlassCard({ children, className = '', hover = true, ...props }: React.HTMLAttributes<HTMLDivElement> & { hover?: boolean }) {
   return (
-    <div className={`
+    <div 
+      className={`
       bg-white/10 backdrop-blur-lg border border-electric-cyan/30 rounded-2xl
       shadow-neural-net
       ${hover ? 'hover:bg-white/15 hover:border-electric-cyan/50 hover:shadow-deep-glow transition-all duration-300 hover:scale-[1.02]' : ''}
       ${className}
-    `}>
+    `}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -20,13 +23,11 @@ export function NeonButton({
   onClick, 
   variant = 'primary', 
   className = '',
-  disabled = false 
-}: { 
-  children: React.ReactNode; 
-  onClick?: () => void; 
+  disabled = false,
+  type = 'button',
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { 
   variant?: 'primary' | 'secondary' | 'ghost'; 
-  className?: string;
-  disabled?: boolean;
 }) {
   const variants = {
     primary: 'bg-gradient-to-r from-electric-cyan via-neon-purple to-electric-cyan text-space-black shadow-neon-cyan hover:shadow-deep-glow',
@@ -38,6 +39,8 @@ export function NeonButton({
     <button
       onClick={onClick}
       disabled={disabled}
+      type={type}
+      {...props}
       className={`
         px-6 py-3 rounded-lg font-semibold text-sm font-display
         transition-all duration-300 transform hover:scale-105 active:scale-95
@@ -113,9 +116,9 @@ export function LoadingSpinner() {
 }
 
 // Enhanced Stat Display with Futuristic Styling
-export function StatDisplay({ label, value, unit = '', icon: Icon }: { label: string; value: number | string; unit?: string; icon?: React.ComponentType<any> }) {
+export function StatDisplay({ label, value, unit = '', icon: Icon, ...props }: React.HTMLAttributes<HTMLDivElement> & { label: string; value: number | string; unit?: string; icon?: React.ComponentType<any> }) {
   return (
-    <GlassCard className="p-4 border-neon-purple/30 group hover:border-electric-cyan/50">
+    <GlassCard className="p-4 border-neon-purple/30 group hover:border-electric-cyan/50" {...props}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-ai-text-secondary text-sm font-body">{label}</p>
         {Icon && <Icon className="w-5 h-5 text-electric-cyan group-hover:animate-pulse" />}
@@ -133,21 +136,22 @@ export function AIInput({
   value, 
   onChange,
   icon: Icon,
-  className = ''
-}: { 
-  placeholder: string; 
-  value: string; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  className = '',
+  type = 'text',
+  disabled = false,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
   icon?: React.ComponentType<any>;
-  className?: string;
 }) {
   return (
     <div className={`relative group ${className}`}>
       <input
-        type="text"
+        type={type}
+        disabled={disabled}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        {...props}
         className={`
           w-full px-4 py-3 pl-12
           bg-white/10 border border-electric-cyan/30 rounded-lg
