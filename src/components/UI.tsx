@@ -182,8 +182,8 @@ export function SectionTitle({ children, className = '' }: { children: React.Rea
 }
 
 // Enhanced Holographic Line with Neural Pulse
-export function HolographicLine() {
+export function HolographicLine({ className = '' }: { className?: string }) {
   return (
-    <div className="h-1 bg-gradient-to-r from-transparent via-electric-cyan to-transparent shadow-neon-cyan animate-pulse-glow" />
+    <div className={`h-1 bg-gradient-to-r from-transparent via-electric-cyan to-transparent shadow-neon-cyan animate-pulse-glow ${className}`} />
   );
 }

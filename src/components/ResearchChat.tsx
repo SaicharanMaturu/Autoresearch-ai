@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Mic, Copy, ThumbsUp, ThumbsDown, X, Loader, Bot, Terminal, Shield, Zap, ChevronLeft, Volume2, Cpu } from 'lucide-react';
+import apiFetch from '../utils/api';
 
 interface ChatMessage {
   id: string;
@@ -40,29 +41,48 @@ export function ResearchChat({ onBack }: { onBack: () => void }) {
       content: inputValue,
       timestamp: new Date(),
     };
-    setMessages([...messages, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputValue('');
 
-    // Simulate AI response
+    // Call backend API instead of hardcoded mock simulation
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const response = await apiFetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage.content,
+          history: messages.map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content
+          }))
+        })
+      });
 
-    const mockResponses = [
-      'Scanning the multi-dimensional topology of your query... I have located three key overlapping paradigms. Would you like me to synthesize them?',
-      'My analysis indicates a critical frontier gap in this exact domain. Initiating predictive crystallization of potential patents.',
-      'Correlating your input with the uploaded data matrix. The evidence suggests strong non-linear relationships here.',
-      'Processing request... cross-referencing bio-digital logic arrays. I am generating a comprehensive knowledge graph.',
-      'Fascinating vector. I am adjusting the synaptic weights of my search algorithm to deep-dive into this topic.',
-    ];
+      if (!response.ok) {
+        throw new Error(`Mainframe offline (HTTP ${response.status})`);
+      }
 
-    const aiMessage: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, aiMessage]);
-    setIsLoading(false);
+      const data = await response.json();
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.text || 'No response received from AI Core.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (err: any) {
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `**[SYSTEM NOTICE]**\n\nCould not connect to external AI Core. Using offline analysis node.\n\nError details: ${err?.message || "Unknown Connection Interruption"}`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVoiceInput = async () => {

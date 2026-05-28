@@ -29,12 +29,12 @@ const CyberInput = ({ icon: Icon, type, placeholder, value, onChange, showPasswo
   </div>
 );
 
-export function LoginPage({ 
-  onLogin, 
+export function LoginPage({
+  onLogin,
   onSignupClick,
-  onForgotPassword
-}: { 
-  onLogin: (email: string, password: string) => void;
+  onForgotPassword,
+}: {
+  onLogin?: () => void;
   onSignupClick?: () => void;
   onForgotPassword?: () => void;
 }) {
@@ -48,10 +48,49 @@ export function LoginPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const validateEmail = (em: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    onLogin(email, password);
-    setIsLoading(false);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data.error || data.message || 'Login failed. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Expecting { success, user, token }
+      if (data.success && data.user) {
+        if (data.token) localStorage.setItem('token', data.token);
+        onLogin && onLogin();
+      } else {
+        setError(data.error || data.message || 'Invalid credentials');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async (credentialResponse: any) => {
@@ -75,11 +114,12 @@ export function LoginPage({
         return;
       }
 
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      onLogin(data.user.email, '');
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+
+      // Notify parent to fetch profile (token stored)
+      onLogin && onLogin();
     } catch (err: any) {
       setError(err.message || 'Google Neural Sync error');
       setGoogleLoading(false);
@@ -211,6 +251,15 @@ export function LoginPage({
         {/* Footer Actions */}
         <div className="mt-6 flex flex-col items-center gap-4">
           <button
+            type="button"
+            onClick={onSignupClick}
+            className="w-full max-w-xs bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 rounded-xl py-2.5 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 transition-all uppercase tracking-widest"
+          >
+            Create Account / Sign Up
+          </button>
+
+          <button
+            type="button"
             onClick={onSignupClick}
             className="text-[10px] font-mono text-slate-400 hover:text-cyan-400 transition-colors uppercase tracking-widest flex items-center gap-2"
           >
@@ -219,6 +268,7 @@ export function LoginPage({
           </button>
           
           <button
+            type="button"
             onClick={onForgotPassword}
             className="text-[10px] font-mono text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest"
           >

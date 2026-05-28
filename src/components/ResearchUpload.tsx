@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, File, CheckCircle, Trash2, X, Zap, Cpu, Scan, Lock, Shield, ArrowUpRight, Search } from 'lucide-react';
 import { GlassCard, NeonButton, SectionTitle, HolographicLine } from './UI';
+import apiFetch from '../utils/api';
 
 export function ResearchUpload({ onUpload, onBack }: { onUpload: (files: File[]) => void; onBack: () => void }) {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [scanPosition, setScanPosition] = useState(0);
+  const [uploadError, setUploadError] = useState('');
 
   const supportedFormats = ['PDF', 'DOCX', 'TXT', 'PNG', 'JPG', 'JPEG'];
   const uploadZoneRef = useRef<HTMLDivElement>(null);
@@ -58,12 +60,37 @@ export function ResearchUpload({ onUpload, onBack }: { onUpload: (files: File[])
   };
 
   const handleUpload = async () => {
+    if (files.length === 0) return;
     setIsUploading(true);
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    onUpload(files);
-    setIsUploading(false);
-    setFiles([]);
+    setUploadError('');
+    let uploadedAll = false;
+    try {
+      // Sequentially transmit file metadata to backend core
+      for (const file of files) {
+        const response = await apiFetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileSize: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+            fileType: file.type || 'File'
+          })
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data?.error || data?.message || `Data transmission failed for: ${file.name}`);
+        }
+      }
+      onUpload(files);
+      uploadedAll = true;
+    } catch (err: any) {
+      setUploadError(`Ingestion Pipeline Failure: ${err?.message || err}`);
+    } finally {
+      setIsUploading(false);
+      if (uploadedAll) {
+        setFiles([]);
+      }
+    }
   };
 
   return (
@@ -239,6 +266,12 @@ export function ResearchUpload({ onUpload, onBack }: { onUpload: (files: File[])
                   ))
                 )}
               </div>
+
+              {uploadError && (
+                <div className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-mono text-rose-300">
+                  {uploadError}
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="mt-6 pt-4 border-t border-[#1e2d4a] flex gap-3">

@@ -20,7 +20,7 @@ const passwordResetTokens = new Map<string, { email: string; expiresAt: number }
 //===========USER DATA PERSISTENCE ============
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const USERS_FILE = path.join(__dirname, "users.json");
+const USERS_FILE = path.join(process.cwd(), "users.json");
 
 const saveUsers = () => {
   try {
@@ -38,14 +38,24 @@ const loadUsers = () => {
       const usersArray = JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
       users.clear();
       for (const [email, user] of usersArray) {
-        users.set(email, user);
+        // Backfill legacy user records so auth/profile logic stays consistent.
+        const normalizedUser = {
+          ...user,
+          id: user?.id || crypto.randomUUID(),
+          name: user?.name || user?.fullName || email.split("@")[0],
+          email: user?.email || email,
+        };
+        users.set(email, normalizedUser);
       }
+      saveUsers();
       process.stdout.write(`\n✅ Users loaded from ${USERS_FILE}\n`);
     }
   } catch (error) {
     process.stdout.write(`\n❌ Error loading users: ${error}\n`);
   }
 };
+
+loadUsers();
 
 app.use(express.json());
 
@@ -201,19 +211,41 @@ app.get("/api/health", (req, res) => {
 app.post("/api/signup", rateLimitMiddleware("signup"), (req, res) => {
   try {
     const { fullName, email, password } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!fullName || !email || !password) {
+    if (!fullName || !normalizedEmail || !password) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    if (users.has(email)) {
+    if (users.has(normalizedEmail)) {
       return res.status(409).json({ error: "User already exists" });
     }
 
-    users.set(email, { fullName, email, password }); // In production, hash this with bcrypt!
+    const userId = crypto.randomUUID();
+    const user = {
+      id: userId,
+      name: fullName,
+      fullName,
+      email: normalizedEmail,
+      password, // In production, hash this with bcrypt!
+      provider: "local",
+      createdAt: new Date().toISOString(),
+    };
+
+    users.set(normalizedEmail, user);
+    uploadedFiles.set(userId, []);
     saveUsers(); // Save users after signup
 
-    res.status(201).json({ success: true, message: "User created successfully" });
+    // Auto-issue session token so frontend can continue without a second login step.
+    const sessionToken = Buffer.from(normalizedEmail + Date.now()).toString('base64');
+    userSessions.set(sessionToken, user.id);
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: { id: user.id, name: user.name, email: user.email },
+      token: sessionToken,
+    });
   } catch (err: any) {
     res.status(500).json({ error: "Signup failed: " + err.message });
   }
@@ -223,17 +255,27 @@ app.post("/api/signup", rateLimitMiddleware("signup"), (req, res) => {
 app.post("/api/login", rateLimitMiddleware("login"), (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: "Missing email or password" });
     }
 
-    const user = users.get(email);
+    const user = users.get(normalizedEmail);
     if (!user || user.password !== password) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const sessionToken = Buffer.from(email + Date.now()).toString('base64');
+    // Backfill any legacy records that may have been created before `id`/`name` existed.
+    if (!user.id || !user.name) {
+      user.id = user.id || crypto.randomUUID();
+      user.name = user.name || user.fullName || normalizedEmail.split('@')[0];
+      user.email = user.email || normalizedEmail;
+      users.set(normalizedEmail, user);
+      saveUsers();
+    }
+
+    const sessionToken = Buffer.from(normalizedEmail + Date.now()).toString('base64');
     userSessions.set(sessionToken, user.id);
 
     res.json({
@@ -606,11 +648,23 @@ app.post("/api/chat", async (req, res) => {
 // Setup Vite server for static asset reload and fallback SPA
 const startServer = async () => {
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e: any) {
+      console.warn("⚠️ Vite middleware failed to initialize, continuing without dev middleware:", e?.message || e);
+      // Fallback: serve static index.html from project root so API remains available in dev
+      const indexPath = path.join(process.cwd(), "index.html");
+      if (fs.existsSync(indexPath)) {
+        app.use(express.static(process.cwd()));
+        app.get("*", (req, res) => {
+          res.sendFile(indexPath);
+        });
+      }
+    }
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

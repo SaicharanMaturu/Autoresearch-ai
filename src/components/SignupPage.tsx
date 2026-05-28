@@ -28,7 +28,7 @@ const CyberInput = ({ icon: Icon, type, placeholder, value, onChange, showPasswo
   </div>
 );
 
-export function SignupPage({ onSignup, onBackToLogin }: { onSignup: (name: string, email: string, password: string) => void; onBackToLogin: () => void }) {
+export function SignupPage({ onSignup, onBackToLogin }: { onSignup?: () => void; onBackToLogin: () => void }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,21 +41,62 @@ export function SignupPage({ onSignup, onBackToLogin }: { onSignup: (name: strin
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const validateEmail = (em: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+
+    if (!fullName.trim()) {
+      setError('Full name is required');
+      return;
+    }
+
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      setError('Matrix keys (passwords) do not match');
+      setError('Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      setError('Matrix key must be at least 6 characters');
+      setError('Password must be at least 6 characters');
       return;
     }
 
     setError('');
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    onSignup(fullName, email, password);
-    setIsLoading(false);
+    try {
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, email, password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data.error || data.message || 'Signup failed. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.success) {
+        if (data.token) localStorage.setItem('token', data.token);
+        // Notify parent to fetch profile if token provided
+        onSignup && onSignup();
+      } else {
+        setError(data.error || data.message || 'Signup failed');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
