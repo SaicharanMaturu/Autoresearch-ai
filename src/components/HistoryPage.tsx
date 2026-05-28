@@ -1,17 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Download, Calendar, X, MessageSquare, File, Clock } from 'lucide-react';
 import { GlassCard, NeonButton, SectionTitle, HolographicLine } from './UI';
+import apiFetch from '../utils/api';
 
 export function HistoryPage({ onBack }: { onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<'uploads' | 'chats'>('uploads');
+  const [uploads, setUploads] = useState<any[]>([]);
+  const [isLoadingUploads, setIsLoadingUploads] = useState(true);
+  const [uploadError, setUploadError] = useState('');
 
-  const uploadHistory = [
-    { id: 1, name: 'Physics-Informed Neural Networks.pdf', date: '2024-05-23', size: '2.4 MB', status: 'Analyzed' },
-    { id: 2, name: 'Quantum Computing Applications.pdf', date: '2024-05-22', size: '1.8 MB', status: 'Analyzing' },
-    { id: 3, name: 'AI Safety Framework.docx', date: '2024-05-21', size: '0.9 MB', status: 'Analyzed' },
-    { id: 4, name: 'Research Methods.txt', date: '2024-05-20', size: '0.3 MB', status: 'Analyzed' },
-    { id: 5, name: 'Methodology Diagram.png', date: '2024-05-19', size: '3.1 MB', status: 'Indexed' },
-  ];
+  useEffect(() => {
+    (async () => {
+      setIsLoadingUploads(true);
+      setUploadError('');
+      try {
+        const res = await apiFetch('/api/history');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || data?.message || 'Failed to fetch history');
+        }
+        const mappedFiles = Array.isArray(data?.files)
+          ? data.files.map((file: any) => ({
+              id: file.id,
+              name: file.name,
+              date: file.uploadedAt || file.date,
+              size: file.size,
+              status: file.status || 'Analyzed',
+            }))
+          : [];
+        setUploads(mappedFiles);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load history';
+        setUploadError(message);
+      } finally {
+        setIsLoadingUploads(false);
+      }
+    })();
+  }, []);
 
   const chatHistory = [
     { id: 1, title: 'Research Gap Analysis', date: '2024-05-23', messages: 12 },
@@ -69,7 +94,25 @@ export function HistoryPage({ onBack }: { onBack: () => void }) {
         {/* Content */}
         {activeTab === 'uploads' && (
           <div className="space-y-3">
-            {uploadHistory.map((file) => (
+            {isLoadingUploads && (
+              <GlassCard className="p-6 text-sm text-ai-text-secondary">
+                Loading upload history...
+              </GlassCard>
+            )}
+
+            {!isLoadingUploads && !!uploadError && (
+              <GlassCard className="p-6 text-sm text-rose-400 border border-rose-500/30 bg-rose-500/10">
+                {uploadError}
+              </GlassCard>
+            )}
+
+            {!isLoadingUploads && !uploadError && uploads.length === 0 && (
+              <GlassCard className="p-6 text-sm text-ai-text-secondary">
+                No uploaded files found yet.
+              </GlassCard>
+            )}
+
+            {!isLoadingUploads && !uploadError && uploads.map((file) => (
               <GlassCard key={file.id} className="p-6 hover:shadow-neon-cyan transition">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4 flex-1">

@@ -19,7 +19,7 @@ export interface AgentNode {
 export interface ResearchPaper {
   id: string;
   title: string;
-  category: 'Paper' | 'Topic' | 'AI Recommendation';
+  category: 'Paper' | 'Topic' | 'AI Recommendation' | 'Core Cluster' | 'Raw Research Paper' | 'AI Recommendation Link' | 'Topic Cluster Node';
   citations: number;
   field: string;
   confidence: number;
