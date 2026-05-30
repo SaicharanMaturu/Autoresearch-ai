@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, LogOut, Bell, Moon, Sun, Cpu, X, Shield, Network, Zap, Fingerprint, Database, HardDrive, LayoutTemplate, Sliders } from 'lucide-react';
 
 const CyberCard = ({ children, className = '', border = 'border-[#1e2d4a]' }: { children: React.ReactNode, className?: string, border?: string }) => (
@@ -14,6 +14,37 @@ export function Settings({ onBack, onLogout }: { onBack: () => void; onLogout: (
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [telemetry, setTelemetry] = useState(false);
   const [memoryLimit, setMemoryLimit] = useState(64);
+
+  useEffect(() => {
+    try {
+      const savedSettings = window.localStorage.getItem('aethelgard-settings');
+      if (!savedSettings) return;
+
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.model) setModel(parsed.model);
+      if (parsed.theme) setTheme(parsed.theme);
+      if (typeof parsed.notificationsEnabled === 'boolean') setNotificationsEnabled(parsed.notificationsEnabled);
+      if (typeof parsed.telemetry === 'boolean') setTelemetry(parsed.telemetry);
+      if (typeof parsed.memoryLimit === 'number') setMemoryLimit(parsed.memoryLimit);
+    } catch {
+      window.localStorage.removeItem('aethelgard-settings');
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      'aethelgard-settings',
+      JSON.stringify({ model, theme, notificationsEnabled, telemetry, memoryLimit })
+    );
+  }, [model, theme, notificationsEnabled, telemetry, memoryLimit]);
+
+  const resetSettings = () => {
+    setModel('DeepSeek');
+    setTheme('Dark');
+    setNotificationsEnabled(true);
+    setTelemetry(false);
+    setMemoryLimit(64);
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#050811] text-slate-300 font-sans relative overflow-x-hidden p-6 flex flex-col items-center">
@@ -218,6 +249,21 @@ export function Settings({ onBack, onLogout }: { onBack: () => void; onLogout: (
               </div>
 
               <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[#1e2d4a] to-transparent my-6"></div>
+
+              <div className="flex items-center justify-between p-5 bg-[#050811] rounded-xl border border-[#1e2d4a] transition-colors">
+                <div>
+                  <p className="text-sm font-bold text-white font-sans flex items-center gap-2">
+                    <SettingsIcon size={14} className="text-cyan-400" /> Local Preferences
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-mono mt-1">Stored in browser only, no backend required</p>
+                </div>
+                <button
+                  onClick={resetSettings}
+                  className="px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400 transition-all"
+                >
+                  Reset Defaults
+                </button>
+              </div>
 
               <div className="flex items-center justify-between p-5 bg-rose-950/20 rounded-xl border border-rose-500/20 hover:border-rose-500/50 transition-colors">
                 <div>

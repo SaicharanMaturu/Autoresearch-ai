@@ -3,11 +3,16 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import crypto from "crypto";
+import { hashPassword, comparePassword, signAccessToken, signRefreshToken, verifyRefreshToken } from "./backend/auth";
+import { connectDB, UserModel, RefreshTokenModel, FileModel, SessionModel } from "./backend/db";
+import { requireAuth } from "./backend/authMiddleware";
+import { enqueueFileProcessing, startWorker } from "./backend/worker";
 import nodemailer from "nodemailer";
+import multer from 'multer';
 import { OAuth2Client } from "google-auth-library";
 import dotenv from "dotenv";
 import fs from "fs";
-import { fileURLToPath } from "url";
+// Note: avoid using import.meta.url here to remain compatible when bundling to CJS
 
 dotenv.config();
 
@@ -15,11 +20,13 @@ const app = express();
 const PORT = 3000;
 
 const users = new Map<string, any>();
+
+const isHashed = (pw: string) => typeof pw === 'string' && pw.startsWith('$2');
 const passwordResetTokens = new Map<string, { email: string; expiresAt: number }>();
 
 //===========USER DATA PERSISTENCE ============
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Use process.cwd() to determine working directory so the bundle works
+// when compiled to either ESM or CommonJS.
 const USERS_FILE = path.join(process.cwd(), "users.json");
 
 const saveUsers = () => {
@@ -57,7 +64,27 @@ const loadUsers = () => {
 
 loadUsers();
 
+// Attempt DB connection (optional)
+connectDB();
+
 app.use(express.json());
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Multer setup for multipart uploads (local storage)
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(process.cwd(), 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    const unique = Date.now().toString() + '-' + Math.random().toString(36).slice(2,8);
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    cb(null, `${unique}-${safeName}`);
+  }
+});
+
+
+const upload = multer({ storage: uploadStorage });
 
 // ============ GMAIL EMAIL SERVICE ============
 const transporter = nodemailer.createTransport({
@@ -121,6 +148,34 @@ const sendPasswordResetEmail = async (email: string, resetToken: string) => {
   }
 };
 
+const sendVerificationEmail = async (email: string, verificationToken: string) => {
+  process.stdout.write(`\n🔧 EMAIL VERIFICATION: ${email} | Token: ${verificationToken}\n`);
+
+  if (!emailServiceEnabled) {
+    process.stdout.write(`[DEMO MODE] Would send verification to ${email}\n`);
+    return true;
+  }
+
+  try {
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const verifyLink = `${appUrl}/#/verify-email?token=${verificationToken}`;
+
+    const mailOptions = {
+      from: process.env.GMAIL_EMAIL,
+      to: email,
+      subject: "Verify your AutoResearch email",
+      html: `Please verify: <a href="${verifyLink}">Verify Email</a>`
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    process.stdout.write(`✅ VERIFICATION EMAIL SENT ID: ${result.messageId}\n`);
+    return true;
+  } catch (error: any) {
+    process.stdout.write(`❌ VERIFICATION EMAIL ERROR: ${error.message || error}\n`);
+    return false;
+  }
+};
+
 // ============ GOOGLE OAUTH ============
 const googleOAuth2Client = (() => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -176,8 +231,42 @@ const rateLimitMiddleware = (endpoint: string) => (req: express.Request, res: ex
   next();
 };
 
-// In-memory storage (for Phase 1 - will be replaced with MongoDB in Phase 2)
-const userSessions: Map<string, any> = new Map();
+// 3. Login Endpoint (with rate limiting)
+app.post("/api/login", rateLimitMiddleware("login"), async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ error: "Missing email or password" });
+    }
+
+    // Prefer DB-backed user if available
+    let user: any = null;
+    try { user = await UserModel.findOne({ email: normalizedEmail }).lean().exec(); } catch(e) { /* ignore */ }
+    if (!user) {
+      user = users.get(normalizedEmail);
+    }
+
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+    const match = await comparePassword(password, user.password || '');
+    if (!match) return res.status(401).json({ error: "Invalid credentials" });
+
+    // Issue tokens and create refresh token record + session
+    const accessToken = signAccessToken({ userId: user.id, email: user.email });
+    const refreshToken = signRefreshToken({ userId: user.id, email: user.email });
+
+    try { await RefreshTokenModel.create({ token: refreshToken, userId: user.id }); } catch (e) { process.stdout.write(`\n⚠️ Could not persist refresh token (login): ${e}\n`); }
+    try { await SessionModel.create({ id: crypto.randomUUID(), userId: user.id, userAgent: req.headers['user-agent'] || '', ip: req.ip }); } catch(e) {}
+
+    res.json({ success: true, user: { id: user.id, name: user.name, email: user.email }, token: accessToken, refreshToken });
+  } catch (err: any) {
+    res.status(500).json({ error: "Login failed: " + err.message });
+  }
+});
+
+// In-memory storage (legacy/demo)
 const uploadedFiles: Map<string, any[]> = new Map();
 const googleUsers: Map<string, any> = new Map();
 
@@ -221,85 +310,183 @@ app.post("/api/signup", rateLimitMiddleware("signup"), (req, res) => {
       return res.status(409).json({ error: "User already exists" });
     }
 
-    const userId = crypto.randomUUID();
-    const user = {
-      id: userId,
-      name: fullName,
-      fullName,
-      email: normalizedEmail,
-      password, // In production, hash this with bcrypt!
-      provider: "local",
-      createdAt: new Date().toISOString(),
-    };
+    (async () => {
+      const userId = crypto.randomUUID();
+      const hashed = await hashPassword(password);
+      const verificationToken = crypto.randomBytes(12).toString('hex');
+      const verificationExpiresAt = Date.now() + (parseInt(process.env.EMAIL_VERIFICATION_EXPIRY || '86400') * 1000);
 
-    users.set(normalizedEmail, user);
-    uploadedFiles.set(userId, []);
-    saveUsers(); // Save users after signup
+      const user = {
+        id: userId,
+        name: fullName,
+        fullName,
+        email: normalizedEmail,
+        password: hashed,
+        verified: false,
+        verificationToken,
+        verificationExpiresAt,
+        provider: "local",
+        createdAt: new Date().toISOString(),
+      };
 
-    // Auto-issue session token so frontend can continue without a second login step.
-    const sessionToken = Buffer.from(normalizedEmail + Date.now()).toString('base64');
-    userSessions.set(sessionToken, user.id);
+      users.set(normalizedEmail, user);
+      uploadedFiles.set(userId, []);
+      saveUsers(); // Save users after signup (legacy file-backed mode)
 
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      user: { id: user.id, name: user.name, email: user.email },
-      token: sessionToken,
-    });
+      // Issue JWT access + refresh tokens
+      const accessToken = signAccessToken({ userId: user.id, email: user.email });
+      const refreshToken = signRefreshToken({ userId: user.id, email: user.email });
+      // Persist refresh token to MongoDB
+      try {
+        await RefreshTokenModel.create({ token: refreshToken, userId: user.id });
+      } catch (e) {
+        // If DB write fails, surface but continue (demo mode may not have DB)
+        process.stdout.write(`\n⚠️ Could not persist refresh token: ${e}\n`);
+      }
+
+      // Persist to MongoDB if available
+      try {
+        await UserModel.updateOne({ email: normalizedEmail }, user, { upsert: true });
+        // Send verification email (demo mode prints token)
+        await sendVerificationEmail(normalizedEmail, verificationToken);
+      } catch (e) {
+        process.stdout.write(`\n⚠️ Could not write user / send verification: ${e}\n`);
+      }
+
+      // Create a server-side session record (optional)
+      try {
+        await SessionModel.create({ id: crypto.randomUUID(), userId: user.id, userAgent: req.headers['user-agent'] || '', ip: req.ip });
+      } catch (e) {
+        process.stdout.write(`\n⚠️ Could not create session record: ${e}\n`);
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "User created successfully",
+        user: { id: user.id, name: user.name, email: user.email },
+        token: accessToken,
+        refreshToken,
+      });
+    })();
   } catch (err: any) {
     res.status(500).json({ error: "Signup failed: " + err.message });
   }
 });
 
-// 3. Login Endpoint (with rate limiting)
-app.post("/api/login", rateLimitMiddleware("login"), (req, res) => {
+// Exchange refresh token for new access token
+app.post('/api/token', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ error: 'Refresh token required' });
 
-    if (!normalizedEmail || !password) {
-      return res.status(400).json({ error: "Missing email or password" });
+    // Require refresh token to exist in persistent store (MongoDB)
+    let tokenEntry: any = null;
+    try {
+      tokenEntry = await RefreshTokenModel.findOne({ token: refreshToken }).exec();
+    } catch (e: any) {
+      return res.status(500).json({ error: 'DB error while verifying refresh token: ' + (e?.message || e) });
     }
 
-    const user = users.get(normalizedEmail);
-    if (!user || user.password !== password) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    if (!tokenEntry || tokenEntry.revoked) return res.status(401).json({ error: 'Invalid refresh token' });
+
+    try {
+      const payload = verifyRefreshToken(refreshToken);
+      // rotation: revoke old token and issue a new refresh token
+      const newAccess = signAccessToken({ userId: payload.userId, email: payload.email });
+      const newRefresh = signRefreshToken({ userId: payload.userId, email: payload.email });
+
+      // Persist rotation
+      try {
+        tokenEntry.revoked = true;
+        await tokenEntry.save();
+        await RefreshTokenModel.create({ token: newRefresh, userId: payload.userId });
+      } catch (e: any) {
+        return res.status(500).json({ error: 'Failed rotating refresh token: ' + (e?.message || e) });
+      }
+
+      res.json({ accessToken: newAccess, refreshToken: newRefresh });
+    } catch (err: any) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
-
-    // Backfill any legacy records that may have been created before `id`/`name` existed.
-    if (!user.id || !user.name) {
-      user.id = user.id || crypto.randomUUID();
-      user.name = user.name || user.fullName || normalizedEmail.split('@')[0];
-      user.email = user.email || normalizedEmail;
-      users.set(normalizedEmail, user);
-      saveUsers();
-    }
-
-    const sessionToken = Buffer.from(normalizedEmail + Date.now()).toString('base64');
-    userSessions.set(sessionToken, user.id);
-
-    res.json({
-      success: true,
-      user: { id: user.id, name: user.name, email: user.email },
-      token: sessionToken
-    });
   } catch (err: any) {
-    res.status(500).json({ error: "Login failed: " + err.message });
+    res.status(500).json({ error: 'Token exchange failed: ' + err.message });
   }
 });
 
-// 4. Logout Endpoint
-app.post("/api/logout", (req, res) => {
+// Email verification endpoint
+app.post('/api/verify-email', async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (token) {
-      userSessions.delete(token);
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Verification token required' });
+
+    // Find user by token
+    const user = await UserModel.findOne({ verificationToken: token }).exec();
+    if (!user) return res.status(400).json({ error: 'Invalid verification token' });
+
+    if (user.verificationExpiresAt && new Date(user.verificationExpiresAt).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Verification token expired' });
     }
-    res.json({ success: true, message: "Logged out successfully" });
-  } catch (err: any) {
-    res.status(500).json({ error: "Logout failed: " + err.message });
+
+    user.verified = true;
+    user.verificationToken = undefined;
+    user.verificationExpiresAt = undefined;
+    await user.save();
+
+    res.json({ success: true, message: 'Email verified' });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Verification failed: ' + (e?.message || e) });
   }
 });
+
+// Logout endpoint: revoke refresh token
+app.post('/api/logout', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      // revoke in persistent store if available
+      try {
+        const entry = await RefreshTokenModel.findOne({ token: refreshToken }).exec();
+        if (entry) {
+          entry.revoked = true;
+          await entry.save();
+        }
+      } catch (e) {
+        // ignore DB errors
+      }
+    }
+
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Logout failed: ' + err.message });
+  }
+});
+
+  // Sessions endpoints
+  app.get('/api/sessions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const sessions = await SessionModel.find({ userId, revoked: false }).sort({ createdAt: -1 }).lean().exec();
+      res.json({ success: true, sessions });
+    } catch (e: any) {
+      res.status(500).json({ error: 'Failed fetching sessions: ' + (e?.message || e) });
+    }
+  });
+
+  app.post('/api/sessions/revoke', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user?.userId;
+      const { sessionId } = req.body;
+      if (!userId || !sessionId) return res.status(400).json({ error: 'Missing parameters' });
+      const s = await SessionModel.findOne({ id: sessionId, userId }).exec();
+      if (!s) return res.status(404).json({ error: 'Session not found' });
+      s.revoked = true;
+      await s.save();
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: 'Failed to revoke session: ' + (e?.message || e) });
+    }
+  });
 
 // 4.5. Forgot Password Endpoint (with rate limiting and email)
 app.post("/api/forgot-password", rateLimitMiddleware("forgot-password"), async (req, res) => {
@@ -373,8 +560,12 @@ app.post("/api/reset-password", rateLimitMiddleware("reset-password"), (req, res
     // Update user password
     const user = users.get(tokenData.email);
     if (user) {
-      user.password = newPassword; // In production, hash this with bcrypt!
-      users.set(tokenData.email, user);
+      (async () => {
+        user.password = await hashPassword(newPassword);
+        users.set(tokenData.email, user);
+        saveUsers();
+        try { await UserModel.updateOne({ email: tokenData.email }, user, { upsert: true }); } catch(e){}
+      })();
     }
 
     // Delete used token
@@ -457,13 +648,23 @@ app.post("/api/google-login", rateLimitMiddleware("google-login"), async (req, r
       }
     }
 
-    const sessionToken = Buffer.from(verifiedData.email + Date.now()).toString('base64');
-    userSessions.set(sessionToken, user.id);
+    // Issue JWTs for Google OAuth sign-in
+    const accessToken = signAccessToken({ userId: user.id, email: user.email });
+    const refreshToken = signRefreshToken({ userId: user.id, email: user.email });
+
+    try {
+      await UserModel.updateOne({ email: user.email }, user, { upsert: true });
+      await RefreshTokenModel.create({ token: refreshToken, userId: user.id });
+      try { await SessionModel.create({ id: crypto.randomUUID(), userId: user.id, userAgent: req.headers['user-agent'] || '', ip: req.ip }); } catch(e) {}
+    } catch (e) {
+      process.stdout.write(`\n⚠️ Google login DB upsert failed: ${e}\n`);
+    }
 
     res.json({
       success: true,
       user: { id: user.id, name: user.name, email: user.email },
-      token: sessionToken
+      token: accessToken,
+      refreshToken,
     });
   } catch (err: any) {
     res.status(500).json({ error: "Google login failed: " + err.message });
@@ -473,39 +674,49 @@ app.post("/api/google-login", rateLimitMiddleware("google-login"), async (req, r
 // ============ FILE UPLOAD ENDPOINTS ============
 
 // 5. File Upload Endpoint
-app.post("/api/upload", (req, res) => {
+// Accept multipart/form-data with field name `file`
+app.post("/api/upload", requireAuth, upload.single('file'), async (req: any, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || !userSessions.has(token)) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const userId = userSessions.get(token);
-    const { fileName, fileSize, fileType } = req.body;
+    const f = req.file;
+    if (!f) return res.status(400).json({ error: 'No file uploaded (field name: file)' });
 
-    if (!fileName || !fileSize) {
-      return res.status(400).json({ error: "Missing file details" });
-    }
-
-    const file = {
+    const fileMeta = {
       id: Date.now().toString(),
-      name: fileName,
-      size: fileSize,
-      type: fileType || 'FILE',
+      name: f.originalname,
+      size: f.size,
+      type: f.mimetype || 'FILE',
       uploadedAt: new Date().toISOString().split('T')[0],
       status: 'Uploaded',
-    };
+      path: `/uploads/${path.basename(f.path)}`,
+    } as any;
 
-    if (!uploadedFiles.has(userId)) {
-      uploadedFiles.set(userId, []);
+    // Persist file metadata to DB if available, otherwise keep in-memory
+    let storedFile = null as any;
+    try {
+      storedFile = await FileModel.create({
+        id: fileMeta.id,
+        userId,
+        name: fileMeta.name,
+        path: fileMeta.path,
+        size: fileMeta.size,
+        type: fileMeta.type,
+        uploadedAt: fileMeta.uploadedAt,
+        status: fileMeta.status,
+      });
+      // Enqueue background processing for this file (OCR/embeddings/etc.)
+      try { enqueueFileProcessing(storedFile.id); } catch (e) { process.stdout.write(`\n⚠️ enqueue failed: ${e}\n`); }
+    } catch (e) {
+      // DB not configured or error; fallback to in-memory
+      if (!uploadedFiles.has(userId)) {
+        uploadedFiles.set(userId, []);
+      }
+      uploadedFiles.get(userId)!.push(fileMeta);
     }
-    uploadedFiles.get(userId)!.push(file);
 
-    res.json({
-      success: true,
-      file: file,
-      message: `File ${fileName} uploaded successfully`
-    });
+    res.json({ success: true, file: fileMeta, message: `File ${f.originalname} uploaded successfully` });
   } catch (err: any) {
     res.status(500).json({ error: "Upload failed: " + err.message });
   }
@@ -514,15 +725,17 @@ app.post("/api/upload", (req, res) => {
 // ============ HISTORY ENDPOINTS ============
 
 // 6. Get User History
-app.get("/api/history", (req, res) => {
+app.get("/api/history", requireAuth, async (req: any, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || !userSessions.has(token)) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const userId = userSessions.get(token);
-    const files = uploadedFiles.get(userId) || [];
+    let files = [] as any[];
+    try {
+      files = await FileModel.find({ userId }).sort({ uploadedAt: -1 }).lean().exec();
+    } catch (e) {
+      files = uploadedFiles.get(userId) || [];
+    }
 
     res.json({
       success: true,
@@ -537,27 +750,44 @@ app.get("/api/history", (req, res) => {
 // ============ PROFILE ENDPOINTS ============
 
 // 7. Get User Profile
-app.get("/api/profile", (req, res) => {
+app.get("/api/profile", requireAuth, async (req: any, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || !userSessions.has(token)) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const userId = userSessions.get(token);
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     let userEmail = '';
     let userName = '';
 
-    // Find user by ID
-    for (const [email, user] of users.entries()) {
-      if (user.id === userId) {
-        userEmail = email;
-        userName = user.name;
-        break;
+    // Prefer DB-backed user record when available
+    try {
+      const dbUser: any = await UserModel.findOne({ id: userId }).lean().exec();
+      if (dbUser) {
+        userEmail = dbUser.email;
+        userName = dbUser.name;
+      } else {
+        for (const [email, user] of users.entries()) {
+          if (user.id === userId) {
+            userEmail = email;
+            userName = user.name;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      for (const [email, user] of users.entries()) {
+        if (user.id === userId) {
+          userEmail = email;
+          userName = user.name;
+          break;
+        }
       }
     }
 
-    const files = uploadedFiles.get(userId) || [];
+    let files = [] as any[];
+    try {
+      files = await FileModel.find({ userId }).sort({ uploadedAt: -1 }).lean().exec();
+    } catch (e) {
+      files = uploadedFiles.get(userId) || [];
+    }
 
     res.json({
       success: true,
@@ -684,3 +914,63 @@ const startServer = async () => {
 startServer().catch((e) => {
   console.error("Vite/Express middleware failed to boot:", e);
 });
+
+// ============ Background maintenance tasks ============
+async function cleanupOldUploads() {
+  const days = parseInt(process.env.UPLOAD_RETENTION_DAYS || '30');
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+
+  try {
+    const files = await FileModel.find().exec();
+    for (const f of files) {
+      const uploadedAt = new Date(f.uploadedAt);
+      if (isNaN(uploadedAt.getTime())) continue;
+      if (uploadedAt.getTime() < cutoff) {
+        // remove file on disk
+        try {
+          const fullPath = path.join(process.cwd(), f.path || '');
+          if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+        } catch (e) {
+          process.stdout.write(`\n⚠️ Failed deleting file ${f.id}: ${e}\n`);
+        }
+        // remove DB record
+        try { await FileModel.deleteOne({ id: f.id }).exec(); } catch (e) { }
+      }
+    }
+
+    // clean in-memory fallback storage
+    const cutoffDate = new Date(cutoff);
+    for (const [uid, list] of uploadedFiles.entries()) {
+      const keep = (list || []).filter((it: any) => {
+        const dt = new Date(it.uploadedAt);
+        return !isNaN(dt.getTime()) && dt.getTime() >= cutoff;
+      });
+      uploadedFiles.set(uid, keep);
+    }
+
+    // Cleanup old/ revoked refresh tokens
+    try {
+      const tokenRetentionDays = parseInt(process.env.REFRESH_TOKEN_RETENTION_DAYS || '30');
+      const tokenCutoff = new Date(Date.now() - tokenRetentionDays * 24 * 60 * 60 * 1000);
+      await RefreshTokenModel.deleteMany({
+        $or: [
+          { revoked: true, createdAt: { $lt: tokenCutoff } },
+          { expiresAt: { $lt: new Date() } }
+        ]
+      }).exec();
+    } catch (e) {
+      process.stdout.write(`\n⚠️ refresh token cleanup failed: ${e}\n`);
+    }
+  } catch (e) {
+    process.stdout.write(`\n⚠️ cleanupOldUploads failed: ${e}\n`);
+  }
+}
+
+// Schedule daily cleanup and start worker if DB available
+(async () => {
+  try {
+    await cleanupOldUploads();
+  } catch (e) {}
+  setInterval(() => { cleanupOldUploads().catch(() => {}); }, 24 * 60 * 60 * 1000);
+  try { startWorker(); } catch (e) { process.stdout.write(`\n⚠️ startWorker failed: ${e}\n`); }
+})();
